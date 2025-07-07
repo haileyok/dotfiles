@@ -1,0 +1,14 @@
+font-size = 11
+cursor-style-blink = true
+cursor-click-to-move = true
+mouse-hide-while-typing = true
+background-opacity = 1
+shell-integration = zsh
+shell-integration-features = true
+window-inherit-working-directory = true
+window-inherit-font-size = true
+window-decoration = false
+background = 000000
+clipboard-read = allow
+clipboard-write = allow
+keybind = shift+enter=text:\n

@@ -1,0 +1,171 @@
+set $mod Mod4
+set $term ghostty
+set $files thunar
+set $scripts ~/.config/sway/scripts
+set $userscripts ~/.config/sway/userscripts
+set $uifont "Ubuntu 13"
+set $prompt #18b218
+set $menu bemenu-run --fn $uifont -b -p "▶" --tf "$prompt" --hf "$highlight" --sf "$highlight" --scf "$highlight" | xargs swaymsg exec
+
+set $highlight #3daee9
+
+set $lock swaylock -f -i $wallpaper -s fill
+
+exec dbus-update-activation-environment --systemd --all
+exec /usr/lib/xdg-desktop-portal --replace
+exec waybar
+# exec kdeconnect-indicator
+exec mako
+exec easyeffects --gapplication-service
+
+output * adaptive_sync off
+
+set $wallpaper /home/hailey/Pictures/wallpapers/wallhaven-9dkeqd.png
+
+output * bg $wallpaper fill
+
+bindsym $mod+Return exec $term
+
+bindsym $mod+q kill
+bindsym Mod1+F4 kill
+
+bindsym $mod+d exec $menu
+
+floating_modifier $mod normal
+
+bindsym $mod+Shift+c reload
+
+# hailey colors
+set $color0 #1a1b26
+set $color7 #a9b1d6
+set $color12 #7aa2f7
+set $background #1a1b26
+
+for_window [window_role="pop-up"] floating enable
+for_window [window_role="bubble"] floating enable
+for_window [window_role="task_dialog"] floating enable
+for_window [window_role="Preferences"] floating enable
+for_window [window_type="dialog"] floating enable
+for_window [window_type="menu"] floating enable
+for_window [window_role="About"] floating enable
+for_window [class="xdg-desktop-portal-kde"] floating enable
+for_window [class="ksysguard"] floating enable
+for_window [class="ksysguard"] sticky enable
+#for_window [app_id="mpv"] layout tabbed
+for_window [class="Wine"] floating enable
+for_window [app_id="lutris"] floating enable
+
+bindsym $mod+L exec $lock
+bindsym --no-repeat $mod+Shift+l exec $lock && systemctl suspend
+
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+bindsym $mod+1 workspace 1
+bindsym $mod+2 workspace 2
+bindsym $mod+3 workspace 3
+bindsym $mod+4 workspace 4
+bindsym $mod+5 workspace 5
+bindsym $mod+6 workspace 6
+bindsym $mod+7 workspace 7
+bindsym $mod+8 workspace 8
+bindsym $mod+9 workspace 9
+bindsym $mod+0 workspace 10
+
+bindsym $mod+Shift+1 move container to workspace 1
+bindsym $mod+Shift+2 move container to workspace 2
+bindsym $mod+Shift+3 move container to workspace 3
+bindsym $mod+Shift+4 move container to workspace 4
+bindsym $mod+Shift+5 move container to workspace 5
+bindsym $mod+Shift+6 move container to workspace 6
+bindsym $mod+Shift+7 move container to workspace 7
+bindsym $mod+Shift+8 move container to workspace 8
+bindsym $mod+Shift+9 move container to workspace 9
+bindsym $mod+Shift+0 move container to workspace 10
+
+bindsym $mod+Control+Shift+Right move workspace to output right
+bindsym $mod+Control+Shift+Left move workspace to output left
+
+
+bindsym XF86AudioRaiseVolume exec pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym XF86AudioMute exec pactl set-sink-mute @DEFAULT_SINK@ toggle
+bindsym XF86MonBrightnessUp exec brightnessctl set +5%
+bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
+
+bindsym $mod+Shift+End exec /home/hailey/.config/hypr/scripts/ScreenShot.sh --now
+bindsym $mod+Shift+s exec /home/hailey/.config/hypr/scripts/ScreenShot.sh --swappy
+
+bindsym $mod+n splith
+bindsym $mod+m splitv
+
+bindsym $mod+f fullscreen
+
+bindsym $mod+space floating toggle
+
+bindsym $mod+Shift+space focus mode_toggle
+
+bindsym $mod+a focus parent
+
+# default sway resizing
+mode "resize" {
+    bindsym Left resize shrink width 10px
+    bindsym Down resize grow height 10px
+    bindsym Up resize shrink height 10px
+    bindsym Right resize grow width 10px
+
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
+
+# hailey resizing
+bindsym $mod+Ctrl+Left resize shrink width 50px
+bindsym $mod+Ctrl+Right resize grow width 50px
+bindsym $mod+Ctrl+Up resize shrink height 50px
+bindsym $mod+Ctrl+Down resize grow height 50px
+
+
+bindsym $mod+Alt+r exec killall -SIGUSR2 waybar
+bindsym $mod+b exec killall -SIGUSR1 waybar
+bindsym $mod+Ctrl+b exec pgrep -x waybar || waybar
+
+# bar {
+#     mode hide
+#     hidden_state hide
+#     modifier $mod
+#     font $uifont
+#
+#     status_command while date +'%-m-%-d-%Y   %I:%M:%S %p'; do sleep 1; done
+#
+#     colors {
+#
+#         statusline #ffffff
+#         background #121212
+#         #background #00000000
+#         focused_workspace #121212 #18b218 #232627
+#         active_workspace #121212 $highlight #232627
+#         inactive_workspace #121212 #7f8c8d #232627
+#     }
+# }
+#
+default_border pixel 1
+default_floating_border pixel 1
+gaps inner 0
+gaps outer 0
+smart_gaps off
+smart_borders on
+
+client.focused          $color12 $color12 $color0 $color12 $color12
+client.focused_inactive $background $background $color7 $background $background
+client.unfocused       $background $background $color7 $background $background
+client.urgent          #ff5555 #ff5555 #f8f8f2 #ff5555 #ff5555
+
+include /home/hailey/.config/sway/config.d/*

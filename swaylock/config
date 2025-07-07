@@ -1,0 +1,50 @@
+# Performance-optimized settings
+daemonize
+show-failed-attempts
+ignore-empty-password
+
+# Simple solid color background for performance
+# No blur, no image processing
+color=1a1b26
+
+# Disable fancy effects
+screenshots=false
+effect-blur=0x0
+effect-pixelate=0
+
+# Ring colors
+inside-color=1a1b26ff
+inside-clear-color=1a1b26ff
+inside-caps-lock-color=1a1b26ff
+inside-ver-color=1a1b26ff
+inside-wrong-color=1a1b26ff
+
+ring-color=7aa2f7ff
+ring-clear-color=a9b1d6ff
+ring-caps-lock-color=ff9e64ff
+ring-ver-color=7aa2f7ff
+ring-wrong-color=f7768eff
+
+line-color=00000000
+line-clear-color=00000000
+line-caps-lock-color=00000000
+line-ver-color=00000000
+line-wrong-color=00000000
+
+text-color=a9b1d6ff
+text-clear-color=a9b1d6ff
+text-caps-lock-color=ff9e64ff
+text-ver-color=a9b1d6ff
+text-wrong-color=f7768eff
+
+# Simple layout
+indicator-radius=100
+indicator-thickness=10
+
+# Font
+font=JetBrains Mono
+font-size=24
+
+# Layout
+indicator-x=50
+indicator-y=50
