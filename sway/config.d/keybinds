@@ -1,1 +1,2 @@
 bindsym $mod+t exec thunar
+bindsym $mod+Shift+n exec swaync-client -t -sw

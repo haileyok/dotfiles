@@ -3,14 +3,14 @@ daemonize
 show-failed-attempts
 ignore-empty-password
 
-# Simple solid color background for performance
-# No blur, no image processing
-color=1a1b26
+# # Simple solid color background for performance
+# # No blur, no image processing
+# color=1a1b26
 
 # Disable fancy effects
-screenshots=false
-effect-blur=0x0
-effect-pixelate=0
+screenshots=true
+# effect-blur=0x0
+# effect-pixelate=0
 
 # Ring colors
 inside-color=1a1b26ff
@@ -19,7 +19,7 @@ inside-caps-lock-color=1a1b26ff
 inside-ver-color=1a1b26ff
 inside-wrong-color=1a1b26ff
 
-ring-color=7aa2f7ff
+ring-color=7aa2f7ff  b21858
 ring-clear-color=a9b1d6ff
 ring-caps-lock-color=ff9e64ff
 ring-ver-color=7aa2f7ff
@@ -43,7 +43,7 @@ indicator-thickness=10
 
 # Font
 font=JetBrains Mono
-font-size=24
+font-size=20
 
 # Layout
 indicator-x=50

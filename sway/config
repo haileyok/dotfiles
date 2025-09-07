@@ -3,11 +3,10 @@ set $term ghostty
 set $files thunar
 set $scripts ~/.config/sway/scripts
 set $userscripts ~/.config/sway/userscripts
-set $uifont "Ubuntu 13"
-set $prompt #18b218
-set $menu bemenu-run --fn $uifont -b -p "▶" --tf "$prompt" --hf "$highlight" --sf "$highlight" --scf "$highlight" | xargs swaymsg exec
+set $uifont "Ubuntu 15"
+set $menu bemenu-run --fn $uifont -b -p "▶" --tf "$highlight" --hf "$highlight" --sf "$highlight" --scf "$highlight" -l "10 up" | xargs swaymsg exec
 
-set $highlight #3daee9
+set $highlight #b21858
 
 set $lock swaylock -f -i $wallpaper -s fill
 set $lock swaylock --clock --indicator --effect-scale 0.4 --effect-vignette 0.5:0.5 --effect-blur 4x2 --datestr "" --timestr "%k:%M" -i $wallpaper -s fill --effect-greyscale
@@ -16,8 +15,12 @@ exec dbus-update-activation-environment --systemd --all
 exec /usr/lib/xdg-desktop-portal --replace
 exec waybar
 # exec kdeconnect-indicator
-exec mako
+exec swaync 
 exec easyeffects --gapplication-service
+
+exec nm-applet --indicator
+
+exec blueman-applet
 
 output * adaptive_sync off
 
