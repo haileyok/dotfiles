@@ -5,17 +5,19 @@ export PATH=$PATH:/home/hailey/go/bin
 
 export ZSH="$HOME/.oh-my-zsh"
 
-ZSH_THEME="af-magic"
+ZSH_THEME="Soliah"
 
 plugins=(
     git
     archlinux
-    zsh-autosuggestions
-    zsh-syntax-highlighting
 )
+
+export RPS1=''
 
 source $ZSH/oh-my-zsh.sh
 source /usr/share/zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
+source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 # Check archlinux plugin commands here
 # https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/archlinux

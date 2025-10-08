@@ -24,7 +24,7 @@ exec blueman-applet
 
 output * adaptive_sync off
 
-set $wallpaper /home/hailey/bgs/wolfgirl.jpg
+set $wallpaper /home/hailey/bgs/lesbians.jpg
 
 output * bg $wallpaper fill
 
@@ -110,8 +110,9 @@ bindsym XF86AudioMute exec pactl set-sink-mute @DEFAULT_SINK@ toggle
 bindsym XF86MonBrightnessUp exec brightnessctl set +5%
 bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
 
-bindsym $mod+Shift+End exec /home/hailey/.config/hypr/scripts/ScreenShot.sh --now
-bindsym $mod+Shift+s exec /home/hailey/.config/hypr/scripts/ScreenShot.sh --swappy
+# bindsym $mod+Shift+End exec /home/hailey/.config/hypr/scripts/ScreenShot.sh --now
+# bindsym $mod+Shift+s exec /home/hailey/.config/hypr/scripts/ScreenShot.sh --swappy
+bindsym $mod+Shift+s exec grim -g "$(slurp)" -t png - | wl-copy -t image/png
 
 bindsym $mod+n splith
 bindsym $mod+m splitv
