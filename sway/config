@@ -64,6 +64,9 @@ for_window [class="ksysguard"] sticky enable
 #for_window [app_id="mpv"] layout tabbed
 for_window [class="Wine"] floating enable
 for_window [app_id="lutris"] floating enable
+for_window [app_id="com.mitchellh.ghostty"] opacity 0.925
+
+corner_radius 10
 
 bindsym $mod+L exec $lock
 bindsym --no-repeat $mod+Shift+l exec $lock && systemctl suspend
@@ -178,5 +181,11 @@ client.focused          $color12 $color12 $color0 $color12 $color12
 client.focused_inactive $background $background $color7 $background $background
 client.unfocused       $background $background $color7 $background $background
 client.urgent          #ff5555 #ff5555 #f8f8f2 #ff5555 #ff5555
+
+blur enable
+blur_radius 4
+blur_passes 1
+
+shadows disable
 
 include /home/hailey/.config/sway/config.d/*
