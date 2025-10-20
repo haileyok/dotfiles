@@ -1,11 +1,13 @@
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
+export EDITOR=nvim
+
 export PATH=$PATH:/home/hailey/go/bin
 
 export ZSH="$HOME/.oh-my-zsh"
 
-ZSH_THEME="Soliah"
+ZSH_THEME="gnzh"
 
 plugins=(
     git
@@ -71,6 +73,8 @@ alias sag='eval `ssh-agent -s` && ssh-add'
 alias pubip='curl ipv4.icanhazip.com'
 
 alias lsl='ls -l'
+
+alias geoip='uv run --project /home/hailey/bsky/ipres /home/hailey/bsky/ipres/main.py'
 
 source /usr/share/nvm/init-nvm.sh
 source /etc/profile.d/google-cloud-cli.sh
