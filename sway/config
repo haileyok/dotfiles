@@ -4,7 +4,10 @@ set $files thunar
 set $scripts ~/.config/sway/scripts
 set $userscripts ~/.config/sway/userscripts
 set $uifont "Ubuntu 15"
-set $menu bemenu-run --fn $uifont -b -p "▶" --tf "$highlight" --hf "$highlight" --sf "$highlight" --scf "$highlight" -l "10 up" | xargs swaymsg exec
+# set $menu bemenu-run --fn $uifont -b -p "▶" --tf "$highlight" --hf "$highlight" --sf "$highlight" --scf "$highlight" -l "10 up" | xargs swaymsg exec
+# git clone --depth=1 https://github.com/adi1090x/rofi.git
+# bash install.sh
+set $menu bash /home/hailey/.config/rofi/launchers/type-2/launcher.sh
 
 set $highlight #b21858
 
