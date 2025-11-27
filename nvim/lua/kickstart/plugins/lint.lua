@@ -8,6 +8,7 @@ return {
 			lint.linters_by_ft = {
 				html = { "htmlhint" },
 				dockerfile = { "hadolint" },
+				rust = { "clippy" },
 			}
 
 			-- However, note that this will enable a set of default linters,

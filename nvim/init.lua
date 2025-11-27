@@ -469,6 +469,21 @@ require("lazy").setup({
 				marksman = {},
 				vtsls = {},
 				tailwindcss = {},
+				rust_analyzer = {
+					settings = {
+						["rust-analyzer"] = {
+							check = {
+								command = "clippy",
+							},
+							cargo = {
+								allFeatures = true,
+							},
+							procMacro = {
+								enable = true,
+							},
+						},
+					},
+				},
 				lua_ls = {
 					-- cmd = { ... },
 					-- filetypes = { ... },
@@ -573,6 +588,7 @@ require("lazy").setup({
 				"htmlhint",
 				"pyright",
 				"ruff",
+				"rust_analyzer",
 			})
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
@@ -674,7 +690,7 @@ require("lazy").setup({
 		opts = {
 			picker = "snacks",
 			default_remote = { "origin" },
-			default_merge_method = "commit",
+			default_merge_method = "squash",
 			default_delete_branch = false,
 			issues = {
 				order_by = {
