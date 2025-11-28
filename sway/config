@@ -11,13 +11,8 @@ set $menu bash /home/hailey/.config/rofi/launchers/type-2/launcher.sh
 
 set $highlight #b21858
 
-# set $lock swaylock -f -i $wallpaper -s fill
-
-# Lock with a blur effect on the wallpaper
-# set $lock swaylock --clock --indicator --effect-scale 1 --effect-vignette 0.5:0.5 --effect-blur 4x2 --datestr "" --timestr "%k:%M" -i $wallpaper -s fill
-
-# Lock with a blur effect over a screenshot of the desktop
-set $lock swaylock --clock --indicator --effect-scale 1 --effect-vignette 0.5:0.5 --effect-blur 7x5 --datestr "" --timestr "%k:%M" --screenshots
+set $lock swaylock -f -i $wallpaper -s fill
+set $lock swaylock --clock --indicator --effect-scale 1 --effect-vignette 0.5:0.5 --effect-blur 4x2 --datestr "" --timestr "%k:%M" -i $wallpaper -s fill
 
 exec dbus-update-activation-environment --systemd --all
 exec /usr/lib/xdg-desktop-portal --replace
@@ -32,7 +27,7 @@ exec blueman-applet
 
 output * adaptive_sync off
 
-set $wallpaper /home/hailey/bgs/wolfgirl.jpg
+set $wallpaper /home/hailey/bgs/carcig.png
 
 output * bg $wallpaper fill
 
@@ -75,6 +70,10 @@ for_window [app_id="lutris"] floating enable
 for_window [app_id="com.mitchellh.ghostty"] opacity 0.925
 for_window [class="Slack"] opacity 0.975
 for_window [class="discord"] opacity 0.975
+
+# Always put workspace 9 on the second monitor
+workspace 9 output HDMI-A-1
+assign [app_id="spotify"] 9
 
 corner_radius 10
 
@@ -122,10 +121,6 @@ bindsym XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -5%
 bindsym XF86AudioMute exec pactl set-sink-mute @DEFAULT_SINK@ toggle
 bindsym XF86MonBrightnessUp exec brightnessctl set +5%
 bindsym XF86MonBrightnessDown exec brightnessctl set 5%-
-bindsym XF86AudioPlay exec playerctl play-pause
-bindsym XF86AudioPause exec playerctl play-pause
-bindsym XF86AudioNext exec playerctl next
-bindsym XF86AudioPrev exec playerctl previous
 
 # bindsym $mod+Shift+End exec /home/hailey/.config/hypr/scripts/ScreenShot.sh --now
 # bindsym $mod+Shift+s exec /home/hailey/.config/hypr/scripts/ScreenShot.sh --swappy
