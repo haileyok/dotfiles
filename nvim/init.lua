@@ -521,8 +521,38 @@ require("lazy").setup({
 						})
 					end,
 				},
-				ty = {
-					cmd = { "uv", "run", "ty", "server" },
+				pyright = {
+					before_init = function(_, config)
+						config.settings.python = vim.tbl_deep_extend("force", config.settings.python or {}, {
+							pythonPath = get_python_path(config.root_dir),
+						})
+					end,
+					settings = {
+						python = {
+							analysis = {
+								typeCheckingMode = "strict",
+								diagnosticMode = "workspace",
+								useLibraryCodeForTypes = true,
+								autoSearchPaths = true,
+								autoImportCompletions = true,
+								diagnosticSeverityOverrides = {
+									reportMissingTypeStubs = "none",
+									reportGeneralTypeIssues = "warning",
+									reportOptionalMemberAccess = "none",
+								},
+								stubPath = "typings",
+								ignore = { "**/node_modules", "**/__pycache__", "**/venv", "**/.venv" },
+							},
+							linting = {
+								enabled = false,
+							},
+						},
+					},
+					on_attach = function(client, bufnr)
+						-- Disable formatting capabilities for Pyright (let ruff handle it)
+						client.server_capabilities.documentFormattingProvider = false
+						client.server_capabilities.documentRangeFormattingProvider = false
+					end,
 				},
 			}
 
@@ -556,8 +586,7 @@ require("lazy").setup({
 				"prettierd",
 				"reorder-python-imports",
 				"htmlhint",
-				-- "pyright",
-				"ty",
+				"pyright",
 				"ruff",
 				"rust_analyzer",
 			})
