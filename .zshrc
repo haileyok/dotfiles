@@ -2,24 +2,23 @@
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 export EDITOR=nvim
-
 export PATH=$PATH:/home/hailey/go/bin
 
-export ZSH="$HOME/.oh-my-zsh"
-
-ZSH_THEME="gnzh"
+eval "$(starship init zsh)"
 
 plugins=(
     git
     archlinux
 )
 
-export RPS1=''
+# Set-up FZF key bindings (CTRL R for fuzzy history finder)
+source <(fzf --zsh)
 
-source $ZSH/oh-my-zsh.sh
 source /usr/share/zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+bindkey '^f' autosuggest-accept
 
 # Check archlinux plugin commands here
 # https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/archlinux
@@ -36,9 +35,6 @@ alias ls='eza -a --icons'
 alias ll='eza -al --icons'
 alias lt='eza -a --tree --level=1 --icons'
 
-# Set-up FZF key bindings (CTRL R for fuzzy history finder)
-source <(fzf --zsh)
-
 HISTFILE=~/.zsh_history
 HISTSIZE=10000
 SAVEHIST=10000
@@ -54,6 +50,8 @@ alias gpr='gh pr create'
 alias gs='git status'
 alias gd='git pull'
 alias diff='git diff'
+alias ga='git add'
+alias gp='git pull'
 
 alias tswitch='sudo tailscale switch'
 alias ts='sudo tailscale'o
