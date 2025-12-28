@@ -74,6 +74,8 @@ alias lsl='ls -l'
 
 alias geoip='uv run --project /home/hailey/bsky/ipres /home/hailey/bsky/ipres/main.py'
 
+alias cat='bat'
+
 source /usr/share/nvm/init-nvm.sh
 source /etc/profile.d/google-cloud-cli.sh
 
