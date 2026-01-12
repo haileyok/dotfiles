@@ -8,7 +8,7 @@ disabled = true
 disabled = false
 
 [os]
-disabled = false
+disabled = true
 
 [localip]
 disabled = false
