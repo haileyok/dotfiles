@@ -32,8 +32,8 @@ tell application "Ghostty"
 end tell'
 '''
 
-alt-d = 'exec-and-forget open -a "Spotlight"'
-# alt-d = 'exec-and-forget open -a "Raycast"'
+# alt-d = 'exec-and-forget open -a "Spotlight"'
+alt-d = 'exec-and-forget open -a "Raycast"'
 
 alt-q = 'close'
 alt-shift-q = 'close'
@@ -96,15 +96,8 @@ alt-m = 'join-with down'
 
 alt-f = 'fullscreen'
 
-alt-space = 'layout floating tiling'
+alt-shift-space = 'layout floating tiling'
 
-# Toggle focus between tiling/floating (equivalent to $mod+Shift+space)
-# alt-shift-space = 'focus toggle_tiling_floating'  # Not directly supported
-
-# Focus parent (equivalent to $mod+a)
-# Note: focus parent/child not yet supported in AeroSpace
-
-# Resize mode trigger (equivalent to $mod+r)
 alt-r = 'mode resize'
 
 alt-ctrl-left = 'resize smart -50'
