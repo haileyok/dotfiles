@@ -469,21 +469,6 @@ require("lazy").setup({
 				marksman = {},
 				vtsls = {},
 				tailwindcss = {},
-				rust_analyzer = {
-					settings = {
-						["rust-analyzer"] = {
-							check = {
-								command = "clippy",
-							},
-							cargo = {
-								allFeatures = true,
-							},
-							procMacro = {
-								enable = true,
-							},
-						},
-					},
-				},
 				lua_ls = {
 					-- cmd = { ... },
 					-- filetypes = { ... },
@@ -498,62 +483,79 @@ require("lazy").setup({
 						},
 					},
 				},
-				ruff = {
-					init_options = {
-						settings = {
-							configurationPreference = "filesystemFirst",
-							fixAll = true,
-							organizeImports = true,
-							workspaceSettings = {
-								lineLength = 120,
-								targetVersion = "py311",
-							},
+				-- ruff = {
+				-- 	init_options = {
+				-- 		settings = {
+				-- 			configurationPreference = "filesystemFirst",
+				-- 			fixAll = true,
+				-- 			organizeImports = true,
+				-- 			workspaceSettings = {
+				-- 				lineLength = 120,
+				-- 				targetVersion = "py311",
+				-- 			},
+				-- 		},
+				-- 	},
+				-- 	on_attach = function(client, bufnr)
+				-- 		client.server_capabilities.hoverProvider = false
+				--
+				-- 		vim.api.nvim_create_autocmd("BufWritePre", {
+				-- 			buffer = bufnr,
+				-- 			callback = function()
+				-- 				vim.lsp.buf.format({ async = false })
+				-- 			end,
+				-- 		})
+				-- 	end,
+				-- },
+				rust_analyzer = {
+					checkOnSave = true,
+					check = {
+						overrideCommand = {
+							"cargo-subspace",
+							"clippy",
+							"$saved_file",
 						},
-					},
-					on_attach = function(client, bufnr)
-						client.server_capabilities.hoverProvider = false
-
-						vim.api.nvim_create_autocmd("BufWritePre", {
-							buffer = bufnr,
-							callback = function()
-								vim.lsp.buf.format({ async = false })
-							end,
-						})
-					end,
-				},
-				pyright = {
-					before_init = function(_, config)
-						config.settings.python = vim.tbl_deep_extend("force", config.settings.python or {}, {
-							pythonPath = get_python_path(config.root_dir),
-						})
-					end,
-					settings = {
-						python = {
-							analysis = {
-								typeCheckingMode = "strict",
-								diagnosticMode = "workspace",
-								useLibraryCodeForTypes = true,
-								autoSearchPaths = true,
-								autoImportCompletions = true,
-								diagnosticSeverityOverrides = {
-									reportMissingTypeStubs = "none",
-									reportGeneralTypeIssues = "warning",
-									reportOptionalMemberAccess = "none",
+						workspace = {
+							discoverConfig = {
+								command = {
+									"cargo-subspace",
+									"discover",
+									"{arg}",
 								},
-								stubPath = "typings",
-								ignore = { "**/node_modules", "**/__pycache__", "**/venv", "**/.venv" },
-							},
-							linting = {
-								enabled = false,
+								progressLabel = "cargo-subspace",
+								filesToWatch = {
+									"Cargo.toml",
+								},
 							},
 						},
+						-- command = "clippy",
+						-- extraArgs = { "--profile", "rust-analyzer" },
+						-- workspace = false,
 					},
-					on_attach = function(client, bufnr)
-						-- Disable formatting capabilities for Pyright (let ruff handle it)
-						client.server_capabilities.documentFormattingProvider = false
-						client.server_capabilities.documentRangeFormattingProvider = false
-					end,
+					-- cfg = {
+					--   setTest = false,
+					-- },
+					-- check = {
+					--   -- experimental, for monorepos
+					--   workspace = false,
+					-- },
+					-- checkOnSave = {
+					--   enable = false,
+					-- },
+					-- diagnostics = {
+					--   enable = false,
+					--   -- disabled = { "unresolved-macro-call", "unresolved-proc-macro" },
+					--   -- enableExperimental = true,
+					-- },
+					-- procMacro = {
+					--   enable = false,
+					-- },
 				},
+				basedpyright = {},
+				-- bacon_ls = {
+				--   updateOnSave = true,
+				--   updateOnSaveWaitMillis = 1000,
+				-- },
+				buf = { filetypes = { "proto" } },
 			}
 
 			for server, config in pairs(servers) do
@@ -586,7 +588,7 @@ require("lazy").setup({
 				"prettierd",
 				"reorder-python-imports",
 				"htmlhint",
-				"pyright",
+				"basedpyright",
 				"ruff",
 				"rust_analyzer",
 			})
@@ -657,6 +659,8 @@ require("lazy").setup({
 				typescript = { "prettierd" },
 				typescriptreact = { "prettierd" },
 				go = { "goimports" },
+				rust = { "rustfmt" },
+				python = { "ruff_fix", "ruff_format", "ruff_organize_imports" },
 			},
 		},
 	},
