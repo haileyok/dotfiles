@@ -666,17 +666,15 @@ require("lazy").setup({
 	},
 
 	{
-		"ellisonleao/gruvbox.nvim",
+		"catppuccin/nvim",
+		name = "catppuccin",
 		priority = 1000,
-		config = true,
 		opts = {
-			transparent_mode = true,
-			palette_overrides = {
-				dark2 = "#665d58",
-			},
+			flavour = "frappe",
+			transparent_background = true,
 		},
 		init = function()
-			vim.cmd.colorscheme("gruvbox")
+			vim.cmd.colorscheme("catppuccin")
 		end,
 	},
 
