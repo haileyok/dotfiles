@@ -2,13 +2,9 @@
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 export EDITOR=nvim
-export PATH=$PATH:/home/hailey/go/bin
-
-eval "$(starship init zsh)"
 
 plugins=(
     git
-    archlinux
 )
 
 # Set-up FZF key bindings (CTRL R for fuzzy history finder)
@@ -30,37 +26,28 @@ pokemon-colorscripts --no-title -s -r
 # fastfetch. Will be disabled if above colorscript was chosen to install
 #fastfetch -c $HOME/.config/fastfetch/config-compact.jsonc
 
-# Set-up icons for files/folders in terminal
-alias ls='eza -a --icons'
-alias ll='eza -al --icons'
-alias lt='eza -a --tree --level=1 --icons'
-
 HISTFILE=~/.zsh_history
 HISTSIZE=10000
 SAVEHIST=10000
 setopt appendhistory
 
 alias gco='git checkout'
-alias gcrt='git checkout -b'
 alias gc='git commit -m'
 alias gca='git commit -am'
 alias gcurr='git rev-parse HEAD'
-alias gcurrcp='git rev-parse HEAD | wl-copy'
+alias gcurrcp='git rev-parse HEAD | pbcopy'
 alias gpr='gh pr create'
 alias gs='git status'
 alias gd='git pull'
 alias diff='git diff'
 alias ga='git add'
-alias gp='git pull'
-
-alias tswitch='sudo tailscale switch'
-alias ts='sudo tailscale'o
+alias gd='git pull'
+alias gp='git push'
 
 alias ghwc='watch -n 3 gh pr checks'
 alias ghc='gh pr checks'
 alias ghco='gh pr checkout'
 alias codes='ykman oath accounts code'
-alias doaws='eval $(~/bsky/bsky-infra/scripts/aws-setup-env default)'
 
 alias n=nvim
 
@@ -72,10 +59,7 @@ alias pubip='curl ipv4.icanhazip.com'
 
 alias lsl='ls -l'
 
-alias geoip='uv run --project /home/hailey/bsky/ipres /home/hailey/bsky/ipres/main.py'
-
 alias cat='bat'
-
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"  # This loads nvm
@@ -92,22 +76,24 @@ LC_TIME=en_US.UTF-8
 LC_NUMERIC=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
-export YUBIKEY_ACCOUNT=aws
-
 export ANDROID_HOME=$HOME/Android/Sdk
 export PATH=$PATH:$ANDROID_HOME/tools
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/usr/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/usr/etc/profile.d/conda.sh" ]; then
-        . "/usr/etc/profile.d/conda.sh"
-    else
-        export PATH="/usr/bin:$PATH"
-    fi
+export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
+export PATH="/opt/homebrew/opt/go@1.25/bin:$PATH"
+
+export PATH="/Users/haileyelizabeth/discord/discord/.local/bin:$PATH"
+#compdef clyde
+_clyde() {
+  eval "$(_CLYDE_COMPLETE=zsh_source clyde)"
+}
+if [[ "$(basename -- ${(%):-%x})" != "_clyde" ]]; then
+  compdef _clyde clyde
 fi
-unset __conda_setup
-# <<< conda initialize <<<
+
+source /Users/haileyelizabeth/.nix-profile/etc/profile.d/nix.sh
+
+
+eval "$(starship init zsh)"
+
+. "$HOME/.local/bin/env"
