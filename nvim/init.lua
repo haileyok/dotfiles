@@ -27,13 +27,25 @@ vim.opt.mouse = "a"
 -- Don't show the mode, since it's already in the status line
 vim.opt.showmode = false
 
--- Sync clipboard between OS and Neovim.
---  Schedule the setting after `UiEnter` because it can increase startup-time.
---  Remove this option if you want your OS clipboard to remain independent.
---  See `:help 'clipboard'`
-vim.schedule(function()
-	vim.opt.clipboard = "unnamedplus"
-end)
+vim.opt.clipboard = "unnamedplus" -- keep yanks going to + register
+
+local osc52 = require("vim.ui.clipboard.osc52")
+
+vim.g.clipboard = {
+	name = "osc52-copy-only",
+	copy = {
+		["+"] = osc52.copy("+"),
+		["*"] = osc52.copy("*"),
+	},
+	paste = {
+		["+"] = function()
+			return "", ""
+		end, -- disable paste
+		["*"] = function()
+			return "", ""
+		end,
+	},
+}
 
 -- Enable break indent
 vim.opt.breakindent = true
@@ -578,13 +590,11 @@ require("lazy").setup({
 			local ensure_installed = vim.tbl_keys(servers or {})
 			vim.list_extend(ensure_installed, {
 				"stylua", -- Used to format Lua code
-				"eslint_d",
 				"hadolint",
 				"beautysh",
 				"goimports",
 				-- "golines",
 				"gomodifytags",
-				"prettier",
 				"prettierd",
 				"reorder-python-imports",
 				"htmlhint",
@@ -933,7 +943,7 @@ require("lazy").setup({
 					{ section = "startup" },
 					{
 						section = "terminal",
-						cmd = "pokemon-colorscripts -r --no-title; sleep .1",
+						cmd = "/home/discord/.nix-profile/bin/pokemon-colorscripts -r --no-title; sleep .1",
 						random = 10,
 						pane = 2,
 						indent = 4,
@@ -1061,6 +1071,12 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufRead", "BufNewFile" }, {
 				end
 			end
 		end
+	end,
+})
+
+vim.api.nvim_create_autocmd("VimLeavePre", {
+	callback = function()
+		vim.lsp.stop_client(vim.lsp.get_clients(), true)
 	end,
 })
 
