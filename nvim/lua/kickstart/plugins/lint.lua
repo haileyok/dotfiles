@@ -5,6 +5,8 @@ return {
 		event = { "BufReadPre", "BufNewFile" },
 		config = function()
 			local lint = require("lint")
+			local dmypy_configured = false
+			local last_branch = nil
 			lint.linters_by_ft = {
 				typescript = { "eslint" },
 				typescriptreact = { "eslint" },
@@ -43,34 +45,48 @@ return {
 			-- lint.linters_by_ft['terraform'] = nil
 			-- lint.linters_by_ft['text'] = nil
 
+			-- Restart dmypy when git branch changes to avoid stale cache
+			vim.api.nvim_create_autocmd({ "FocusGained", "TermLeave" }, {
+				group = vim.api.nvim_create_augroup("dmypy-branch-watch", { clear = true }),
+				callback = function()
+					local branch = vim.fn.system("git rev-parse --abbrev-ref HEAD 2>/dev/null"):gsub("\n", "")
+					if last_branch and branch ~= last_branch then
+						vim.fn.system("dmypy stop 2>/dev/null")
+						dmypy_configured = false
+					end
+					last_branch = branch
+				end,
+			})
+
 			-- Create autocommand which carries out the actual linting
 			-- on the specified events.
 			local lint_augroup = vim.api.nvim_create_augroup("lint", { clear = true })
-			vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
+			vim.api.nvim_create_autocmd({ "BufWritePost" }, {
 				group = lint_augroup,
 				callback = function()
 					if not vim.opt_local.modifiable:get() then
 						return
 					end
 
-					if vim.bo.filetype == "python" then
-						-- Resolve mypy executable from active virtualenv or cwd .venv
-						local mypy_cmd = "mypy"
+					if vim.bo.filetype == "python" and not dmypy_configured then
+						dmypy_configured = true
+
+						-- Find dmypy binary (co-located with mypy)
+						local dmypy_cmd = "dmypy"
 						local candidates = {
-							(vim.env.VIRTUAL_ENV or "") .. "/bin/mypy",
-							vim.fn.getcwd() .. "/.venv/bin/mypy",
+							(vim.env.VIRTUAL_ENV or "") .. "/bin/dmypy",
+							vim.fn.getcwd() .. "/.venv/bin/dmypy",
 						}
 						for _, candidate in ipairs(candidates) do
-							if candidate ~= "/bin/mypy" and vim.fn.filereadable(candidate) == 1 then
-								mypy_cmd = candidate
+							if candidate ~= "/bin/dmypy" and vim.fn.filereadable(candidate) == 1 then
+								dmypy_cmd = candidate
 								break
 							end
 						end
-						lint.linters.mypy.cmd = mypy_cmd
 
-						-- Append --config-file if a project-specific mypy config exists
-						local mypy = require("lint.linters.mypy")
-						local base_args = {
+						local dmypy_args = {
+							"run",
+							"--",
 							"--show-column-numbers",
 							"--show-error-end",
 							"--hide-error-context",
@@ -83,9 +99,11 @@ return {
 							vim.fn.getcwd() .. ";"
 						)
 						if config ~= "" then
-							vim.list_extend(base_args, { "--config-file", vim.fn.fnamemodify(config, ":p") })
+							vim.list_extend(dmypy_args, { "--config-file", vim.fn.fnamemodify(config, ":p") })
 						end
-						mypy.args = base_args
+
+						lint.linters.mypy.cmd = dmypy_cmd
+						require("lint.linters.mypy").args = dmypy_args
 					end
 
 					lint.try_lint()

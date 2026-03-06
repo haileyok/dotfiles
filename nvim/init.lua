@@ -231,7 +231,7 @@ require("lazy").setup({
 			vim.api.nvim_set_hl(0, "GitSignsCurrentLineBlame", { fg = "#8f8f8f" }),
 			current_line_blame = true,
 			current_line_blame_opts = {
-				delay = 0,
+				delay = 200,
 				virt_text_pos = "right_align",
 			},
 			signs = {
@@ -562,7 +562,24 @@ require("lazy").setup({
 					--   enable = false,
 					-- },
 				},
-				basedpyright = {},
+				basedpyright = {
+				settings = {
+					basedpyright = {
+						analysis = {
+							typeCheckingMode = "basic",
+							diagnosticMode = "openFilesOnly",
+							diagnosticSeverityOverrides = {
+								reportMissingTypeStubs = false,
+							},
+						},
+					},
+				},
+				on_init = function(client)
+					if _cached_python_path then
+						client.config.settings.python = { pythonPath = _cached_python_path }
+					end
+				end,
+			},
 				-- bacon_ls = {
 				--   updateOnSave = true,
 				--   updateOnSaveWaitMillis = 1000,
@@ -596,6 +613,7 @@ require("lazy").setup({
 				-- "golines",
 				"gomodifytags",
 				"prettierd",
+				"eslint_d",
 				"reorder-python-imports",
 				"htmlhint",
 				"basedpyright",
@@ -660,14 +678,14 @@ require("lazy").setup({
 				-- python = { "isort", "black" },
 				--
 				-- You can use 'stop_after_first' to run the first available formatter from the list
-				javascript = { "prettierd" },
-				javascriptreact = { "prettierd" },
+				javascript = { "prettierd", "eslint_d" },
+				javascriptreact = { "prettierd", "eslint_d" },
 				json = { "prettierd" },
 				jsonc = { "prettierd" },
 				css = { "prettierd" },
 				html = { "prettierd" },
-				typescript = { "prettierd" },
-				typescriptreact = { "prettierd" },
+				typescript = { "prettierd", "eslint_d" },
+				typescriptreact = { "prettierd", "eslint_d" },
 				go = { "goimports" },
 				rust = { "rustfmt" },
 				python = { "ruff_fix", "ruff_format", "ruff_organize_imports" },
@@ -691,7 +709,7 @@ require("lazy").setup({
 	-- Highlight todo, notes, etc in comments
 	{
 		"folke/todo-comments.nvim",
-		event = "VimEnter",
+		event = "BufReadPost",
 		dependencies = { "nvim-lua/plenary.nvim" },
 		opts = { signs = false },
 	},
@@ -734,7 +752,7 @@ require("lazy").setup({
 			--  - va)  - [V]isually select [A]round [)]paren
 			--  - yinq - [Y]ank [I]nside [N]ext [Q]uote
 			--  - ci'  - [C]hange [I]nside [']quote
-			require("mini.ai").setup({ n_lines = 500 })
+			require("mini.ai").setup({ n_lines = 150 })
 
 			-- Add/delete/replace surroundings (brackets, quotes, etc.)
 			--
@@ -863,6 +881,9 @@ require("lazy").setup({
 			},
 			fuzzy = { implementation = "prefer_rust_with_warning" },
 			completion = {
+				menu = {
+					auto_show_delay_ms = 150,
+				},
 				documentation = {
 					auto_show = true,
 				},
@@ -873,6 +894,7 @@ require("lazy").setup({
 
 	{
 		"ray-x/lsp_signature.nvim",
+		event = "LspAttach",
 		config = function()
 			require("lsp_signature").setup({})
 		end,
@@ -897,7 +919,7 @@ require("lazy").setup({
 
 	{
 		"OXY2DEV/markview.nvim",
-		lazy = false,
+		ft = { "markdown", "markdown_inline" },
 		priority = 49,
 	},
 
@@ -925,7 +947,7 @@ require("lazy").setup({
 
 	{ "akinsho/bufferline.nvim", version = "*", dependencies = "nvim-tree/nvim-web-devicons", opts = {} },
 
-	{ "windwp/nvim-ts-autotag", lazy = false, opts = {} },
+	{ "windwp/nvim-ts-autotag", event = "InsertEnter", opts = {} },
 
 	{
 		"folke/snacks.nvim",
@@ -1041,9 +1063,14 @@ require("lazy").setup({
 	},
 })
 
-vim.api.nvim_create_autocmd({ "BufEnter", "BufRead", "BufNewFile" }, {
+local _cached_python_path = nil
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
 	pattern = "*.py",
 	callback = function()
+		if _cached_python_path then
+			return
+		end
+
 		local root_dir = vim.fn.getcwd()
 
 		local uv_python = vim.fn.system("cd " .. root_dir .. " && uv run which python 2>/dev/null"):gsub("\n", "")
@@ -1054,6 +1081,7 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufRead", "BufNewFile" }, {
 				vim.env.VIRTUAL_ENV = venv_path
 				vim.env.PATH = venv_path .. "/bin:" .. vim.env.PATH
 				vim.g.python3_host_prog = uv_python
+				_cached_python_path = uv_python
 			end
 		else
 			local venv_paths = {
@@ -1067,6 +1095,7 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufRead", "BufNewFile" }, {
 					vim.env.VIRTUAL_ENV = venv
 					vim.env.PATH = venv .. "/bin:" .. vim.env.PATH
 					vim.g.python3_host_prog = venv .. "/bin/python"
+					_cached_python_path = venv .. "/bin/python"
 					break
 				end
 			end
