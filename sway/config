@@ -1,5 +1,5 @@
 set $mod Mod4
-set $term ghostty
+set $term nixGL ghostty
 set $files thunar
 set $scripts ~/.config/sway/scripts
 set $userscripts ~/.config/sway/userscripts
@@ -12,10 +12,11 @@ set $menu bash /home/hailey/.config/rofi/launchers/type-2/launcher.sh
 set $highlight #b21858
 
 set $lock swaylock -f -i $wallpaper -s fill
-set $lock swaylock --clock --indicator --effect-scale 1 --effect-vignette 0.5:0.5 --effect-blur 4x2 --datestr "" --timestr "%k:%M" -i $wallpaper -s fill
+# set $lock swaylock --clock --indicator --effect-scale 1 --effect-vignette 0.5:0.5 --effect-blur 4x2 --datestr "" --timestr "%k:%M" -i $wallpaper -s fill
 
 exec dbus-update-activation-environment --systemd --all
-exec /usr/lib/xdg-desktop-portal --replace
+exec /usr/libexec/xdg-desktop-portal --replace
+exec swayidle -C ~/.config/swayidle/config
 exec waybar
 # exec kdeconnect-indicator
 exec swaync 
@@ -27,9 +28,9 @@ exec blueman-applet
 
 output * adaptive_sync off
 
-set $wallpaper /home/hailey/bgs/carcig.png
+#set $wallpaper /home/hailey/bgs/carcig.png
 
-output * bg $wallpaper fill
+# output * bg $wallpaper fill
 
 bindsym $mod+Return exec $term
 
@@ -71,11 +72,11 @@ for_window [app_id="com.mitchellh.ghostty"] opacity 0.925
 for_window [class="Slack"] opacity 0.975
 for_window [class="discord"] opacity 0.975
 
-# Always put workspace 9 on the second monitor
-workspace 9 output HDMI-A-1
+# Always put workspace 9 on the second monitor (uncomment when using external display)
+#workspace 9 output HDMI-A-1
 assign [app_id="spotify"] 9
 
-corner_radius 10
+#corner_radius 10
 
 bindsym $mod+L exec $lock
 bindsym --no-repeat $mod+Shift+l exec $lock && systemctl suspend
@@ -192,10 +193,10 @@ client.focused_inactive $background $background $color7 $background $background
 client.unfocused       $background $background $color7 $background $background
 client.urgent          #ff5555 #ff5555 #f8f8f2 #ff5555 #ff5555
 
-blur enable
-blur_radius 4
-blur_passes 1
+#blur enable
+#blur_radius 4
+#blur_passes 1
 
-shadows disable
+#shadows disable
 
 include /home/hailey/.config/sway/config.d/*

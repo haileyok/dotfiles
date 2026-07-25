@@ -1,0 +1,18 @@
+module nix-store-exec 1.1;
+
+require {
+    type unconfined_t;
+    type init_t;
+    type default_t;
+    class file { entrypoint execute execute_no_trans map read getattr open };
+}
+
+# Allow unconfined_t to use default_t files as entrypoints (login shells,
+# session binaries). Without this, SELinux blocks nix-installed zsh from
+# being used as a login shell, causing immediate session termination.
+allow unconfined_t default_t:file { entrypoint execute execute_no_trans map read getattr };
+
+# Allow systemd (init_t) to open and read nix store files (service units, etc.)
+# Without this, systemd cannot read nix-daemon.service and the nix daemon
+# fails to start.
+allow init_t default_t:file { open read getattr };

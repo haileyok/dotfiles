@@ -4,19 +4,21 @@
 export EDITOR=nvim
 export PATH=$PATH:/home/hailey/go/bin
 
+# Fix locale warnings from nix binaries (nix glibc lacks locale data)
+export LOCALE_ARCHIVE=~/.nix-profile/lib/locale/locale-archive
+
 eval "$(starship init zsh)"
 
 plugins=(
     git
-    archlinux
 )
 
 # Set-up FZF key bindings (CTRL R for fuzzy history finder)
 source <(fzf --zsh)
 
-source /usr/share/zsh/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh
-source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source ~/.nix-profile/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh
+source ~/.nix-profile/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+source ~/.nix-profile/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 bindkey '^f' autosuggest-accept
 
@@ -31,9 +33,9 @@ pokemon-colorscripts --no-title -s -r
 #fastfetch -c $HOME/.config/fastfetch/config-compact.jsonc
 
 # Set-up icons for files/folders in terminal
-alias ls='eza -a --icons'
-alias ll='eza -al --icons'
-alias lt='eza -a --tree --level=1 --icons'
+#alias ls='eza -a --icons'
+#alias ll='eza -al --icons'
+#alias lt='eza -a --tree --level=1 --icons'
 
 HISTFILE=~/.zsh_history
 HISTSIZE=10000
@@ -54,7 +56,7 @@ alias ga='git add'
 alias gp='git pull'
 
 alias tswitch='sudo tailscale switch'
-alias ts='sudo tailscale'o
+alias ts='sudo tailscale'
 
 alias ghwc='watch -n 3 gh pr checks'
 alias ghc='gh pr checks'
@@ -76,8 +78,8 @@ alias geoip='uv run --project /home/hailey/bsky/ipres /home/hailey/bsky/ipres/ma
 
 alias cat='bat'
 
-source /usr/share/nvm/init-nvm.sh
-source /etc/profile.d/google-cloud-cli.sh
+# source /usr/share/nvm/init-nvm.sh
+# source /etc/profile.d/google-cloud-cli.sh
 
 LC_ADDRESS=en_US.UTF-8
 LC_NAME=en_US.UTF-8
@@ -97,15 +99,15 @@ export PATH=$PATH:$ANDROID_HOME/tools
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/usr/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/usr/etc/profile.d/conda.sh" ]; then
-        . "/usr/etc/profile.d/conda.sh"
-    else
-        export PATH="/usr/bin:$PATH"
-    fi
-fi
-unset __conda_setup
+# __conda_setup="$('/usr/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+# if [ $? -eq 0 ]; then
+#     eval "$__conda_setup"
+# else
+#     if [ -f "/usr/etc/profile.d/conda.sh" ]; then
+#         . "/usr/etc/profile.d/conda.sh"
+#     else
+#         export PATH="/usr/bin:$PATH"
+#     fi
+# fi
+# unset __conda_setup
 # <<< conda initialize <<<

@@ -47,7 +47,7 @@
         "format": "  {temperatureC}°C"
     },
 
-    "hyprland/language": {
+    "sway/language": {
         "format": "{short}"
     },
 

@@ -8,7 +8,7 @@ ignore-empty-password
 # color=1a1b26
 
 # Disable fancy effects
-screenshots=true
+# screenshots=true (not supported by upstream swaylock)
 # effect-blur=0x0
 # effect-pixelate=0
 
@@ -19,7 +19,7 @@ inside-caps-lock-color=1a1b26ff
 inside-ver-color=1a1b26ff
 inside-wrong-color=1a1b26ff
 
-ring-color=7aa2f7ff  b21858
+ring-color=7aa2f7ff
 ring-clear-color=a9b1d6ff
 ring-caps-lock-color=ff9e64ff
 ring-ver-color=7aa2f7ff

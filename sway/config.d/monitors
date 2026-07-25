@@ -1,2 +1,6 @@
-output DP-2 resolution 3840x2160@120Hz pos 0,0
-output HDMI-A-1 resolution 2560x1440@143.912hz transform 270 pos -1440,0
+# Laptop display (BOE 0x0BC9, 2560x1600 @ 165Hz)
+output eDP-1 resolution 2560x1600@165Hz pos 0,0
+
+# External monitors - uncomment and adjust when connected:
+#output DP-2 resolution 3840x2160@120Hz pos 0,0
+#output HDMI-A-1 resolution 2560x1440@143.912hz transform 270 pos -1440,0

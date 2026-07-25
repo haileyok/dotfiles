@@ -1,0 +1,11 @@
+[terminal]
+# The VT to run the greeter on
+vt = 1
+
+[default_session]
+# openSUSE's greetd setup: greetd launches sway (system-installed)
+# with a special greeter config that runs gtkgreet.
+# gtkgreet presents the login UI and lets you pick a session.
+# Requires: zypper install sway gtkgreet
+command = "sway --config /etc/greetd/sway-config"
+user = "greeter"
