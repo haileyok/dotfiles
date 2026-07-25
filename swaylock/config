@@ -46,5 +46,5 @@ font=JetBrains Mono
 font-size=20
 
 # Layout
-indicator-x=50
-indicator-y=50
+# indicator-x=50
+# indicator-y=50
