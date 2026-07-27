@@ -1,6 +1,9 @@
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
+# Ensure nix profile is in PATH (needed on --no-daemon installs)
+export PATH="$HOME/.nix-profile/bin:$PATH"
+
 export EDITOR=nvim
 export PATH=$PATH:/home/hailey/go/bin
 export PATH=$HOME/dotfiles/bin:$PATH
@@ -11,9 +14,12 @@ export LOCALE_ARCHIVE=~/.nix-profile/lib/locale/locale-archive
 # Enable native Wayland for Electron apps (Slack, Discord, Spotify)
 export NIXOS_OZONE_WL=1
 
+# Set SHELL to nix zsh so zellij uses it for panes
+export SHELL="$HOME/.nix-profile/bin/zsh"
+
 # Auto-start zellij on SSH login
 if [ -n "$SSH_CONNECTION" ] && [ -z "$ZELLIJ" ]; then
-    exec zellij attach -c main
+    exec "$HOME/.nix-profile/bin/zellij" attach -c main
 fi
 
 eval "$(starship init zsh)"
