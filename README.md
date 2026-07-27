@@ -101,6 +101,7 @@ profile — CLI/dev tools only, no desktop packages:
 nix profile install .#minimal
 
 # Symlink CLI configs only
+ln -sf ~/dotfiles/.bashrc ~/.bashrc
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
 ln -sf ~/dotfiles/.tmux.conf ~/.tmux.conf
 ln -sf ~/dotfiles/starship.toml ~/.config/starship.toml
