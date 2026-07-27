@@ -91,6 +91,30 @@ swaymsg -t getoutputs
 # Edit sway/config.d/monitors if needed
 ```
 
+## Minimal setup (user-only machines, no root)
+
+For machines where you only have a user account (no sudo), use the minimal
+profile — CLI/dev tools only, no desktop packages:
+
+```bash
+# Install minimal package set
+nix profile install .#minimal
+
+# Symlink CLI configs only
+ln -sf ~/dotfiles/.zshrc ~/.zshrc
+ln -sf ~/dotfiles/.tmux.conf ~/.tmux.conf
+ln -sf ~/dotfiles/starship.toml ~/.config/starship.toml
+ln -sf ~/dotfiles/nvim ~/.config/nvim
+ln -sf ~/dotfiles/zellij ~/.config/zellij
+
+# Clone tmux plugin manager
+git clone --depth=1 https://github.com/tmux-plugins/tpm.git ~/.tmux/plugins/tpm
+```
+
+Includes: zsh, starship, fzf, eza, bat, gh, uv, go, yarn, yubikey-manager,
+tmux, zellij, neovim, btop, ghostty, zsh plugins, glibcLocales.
+Does NOT include: sway, waybar, rofi, fonts, GUI apps.
+
 ## What's included
 
 ### Packages (flake.nix)

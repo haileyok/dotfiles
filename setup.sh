@@ -146,6 +146,20 @@ if [ -f "$ONEPASSWORD_DESKTOP" ]; then
     echo "  ✓ 1password desktop patched (nixGL wrapper)"
 fi
 
+# Patch discord to launch via nixGL (Electron GPU compositing needs system Mesa)
+DISCORD_DESKTOP="$APPS_DIR/discord.desktop"
+if [ -f "$DISCORD_DESKTOP" ]; then
+    sed -i 's|^Exec=Discord|Exec=nixGL Discord|g' "$DISCORD_DESKTOP"
+    echo "  ✓ discord desktop patched (nixGL wrapper)"
+fi
+
+# Patch spotify to launch via nixGL (GPU compositing needs system Mesa)
+SPOTIFY_DESKTOP="$APPS_DIR/spotify.desktop"
+if [ -f "$SPOTIFY_DESKTOP" ]; then
+    sed -i 's|^Exec=spotify|Exec=nixGL spotify|g' "$SPOTIFY_DESKTOP"
+    echo "  ✓ spotify desktop patched (nixGL wrapper)"
+fi
+
 # ---------------------------------------------------------------------------
 # 3c. Clean up stale environment.d (superseded by /etc/environment)
 # ---------------------------------------------------------------------------
@@ -175,6 +189,23 @@ echo "--- Bin directory ---"
 # .zshrc adds $HOME/dotfiles/bin to PATH directly.
 echo "  ✓ ~/dotfiles/bin/ on PATH (via .zshrc)"
 echo "  Scripts: power-profiles.sh (requires power-profiles-daemon on laptops)"
+echo
+
+# ---------------------------------------------------------------------------
+# 4c. Minimal setup (user-only machines, no root)
+# ---------------------------------------------------------------------------
+# On machines where you only have a user account (no sudo), use:
+#   nix profile install .#minimal
+# Then symlink only the CLI configs (skip desktop/Wayland configs):
+#
+#   ln -sf ~/dotfiles/.zshrc ~/.zshrc
+#   ln -sf ~/dotfiles/.tmux.conf ~/.tmux.conf
+#   ln -sf ~/dotfiles/starship.toml ~/.config/starship.toml
+#   ln -sf ~/dotfiles/nvim ~/.config/nvim
+#   ln -sf ~/dotfiles/zellij ~/.config/zellij
+#
+# Also clone tpm for tmux:
+#   git clone --depth=1 https://github.com/tmux-plugins/tpm.git ~/.tmux/plugins/tpm
 echo
 
 # ---------------------------------------------------------------------------

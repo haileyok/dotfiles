@@ -96,6 +96,11 @@
       # Convenience: everything in one derivation
       allPackages = cliTools ++ desktopTools ++ apps ++ fonts ++ zshPlugins ++ localeData;
 
+      # Minimal set for machines where you only have a user account (no sudo).
+      # No desktop tools, no GUI apps, no Wayland-specific packages.
+      # Includes shell, editor, git tools, language runtimes, zsh plugins, and locale data.
+      minimalPackages = cliTools ++ zshPlugins ++ localeData;
+
     in
     {
       packages.${system} = {
@@ -103,6 +108,14 @@
           name = "dotfiles-env";
           paths = allPackages;
           meta.description = "All packages for Hailey's dotfiles";
+        };
+
+        # Minimal profile for user-only machines (no root required)
+        # Usage: nix profile install .#minimal
+        minimal = pkgs.buildEnv {
+          name = "dotfiles-minimal";
+          paths = minimalPackages;
+          meta.description = "CLI/dev tools only — for machines without root access";
         };
 
         cliTools = pkgs.buildEnv {
