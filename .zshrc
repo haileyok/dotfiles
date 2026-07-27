@@ -3,9 +3,13 @@
 
 export EDITOR=nvim
 export PATH=$PATH:/home/hailey/go/bin
+export PATH=$HOME/dotfiles/bin:$PATH
 
 # Fix locale warnings from nix binaries (nix glibc lacks locale data)
 export LOCALE_ARCHIVE=~/.nix-profile/lib/locale/locale-archive
+
+# Enable native Wayland for Electron apps (Slack, Discord, Spotify)
+export NIXOS_OZONE_WL=1
 
 eval "$(starship init zsh)"
 
@@ -65,6 +69,12 @@ alias codes='ykman oath accounts code'
 alias doaws='eval $(~/bsky/bsky-infra/scripts/aws-setup-env default)'
 
 alias n=nvim
+
+# Power profile shortcuts (laptops only, requires power-profiles-daemon)
+alias pps='power-profiles.sh status'
+alias ppp='power-profiles.sh performance'
+alias ppb='power-profiles.sh balanced'
+alias ppsv='power-profiles.sh power-saver'
 
 alias ylq='yarn lint --quiet'
 

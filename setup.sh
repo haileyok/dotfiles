@@ -83,11 +83,78 @@ else
     cp -r "$tmpdir/rofi/files/images" "$CONFIG_DIR/rofi/images" 2>/dev/null || true
     rm -rf "$tmpdir"
 
-    # Patch launcher script to set LOCALE_ARCHIVE for nix glibc
-    sed -i 's|^rofi \\|LOCALE_ARCHIVE="$HOME/.nix-profile/lib/locale/locale-archive" rofi \\|' \
-        "$ROFI_LAUNCHER"
-    echo "  ✓ rofi type-2 launcher installed (with nix locale fix)"
+    # Patch launcher script to export LOCALE_ARCHIVE and NIXOS_OZONE_WL
+    # for nix glibc locale fix and native Wayland for Electron apps
+    cat > "$ROFI_LAUNCHER" << 'LAUNCHER'
+#!/usr/bin/env bash
+
+dir="$HOME/.config/rofi/launchers/type-2"
+theme='style-1'
+
+export LOCALE_ARCHIVE="$HOME/.nix-profile/lib/locale/locale-archive"
+export NIXOS_OZONE_WL=1
+rofi \
+    -show drun \
+    -theme ${dir}/${theme}.rasi
+LAUNCHER
+    chmod +x "$ROFI_LAUNCHER"
+    echo "  ✓ rofi type-2 launcher installed (with nix locale + Wayland fixes)"
 fi
+echo
+
+# ---------------------------------------------------------------------------
+# 3b. Patch desktop files for nixGL (ghostty) and locale
+# ---------------------------------------------------------------------------
+echo "--- Patching desktop files for nix compatibility ---"
+APPS_DIR="$HOME/.local/share/applications"
+mkdir -p "$APPS_DIR"
+
+# Copy nix desktop files to user-local dir (writable, takes precedence via XDG_DATA_HOME)
+for f in "$HOME"/.nix-profile/share/applications/*.desktop; do
+    [ -f "$f" ] && cp "$f" "$APPS_DIR/" 2>/dev/null
+done
+
+# Patch ghostty to launch via nixGL (OpenGL bridge to system Mesa drivers)
+GHOSTTY_DESKTOP="$APPS_DIR/com.mitchellh.ghostty.desktop"
+if [ -f "$GHOSTTY_DESKTOP" ]; then
+    sed -i 's|^Exec=.*ghostty.*|Exec=nixGL '"$HOME"'/.nix-profile/bin/ghostty --gtk-single-instance=true|' "$GHOSTTY_DESKTOP"
+    sed -i 's|^TryExec=.*|TryExec=nixGL|' "$GHOSTTY_DESKTOP"
+    sed -i 's|^DBusActivatable=.*|DBusActivatable=false|' "$GHOSTTY_DESKTOP"
+    echo "  ✓ ghostty desktop patched (nixGL wrapper)"
+fi
+
+# Patch slack to launch via nixGL (Electron GPU compositing needs system Mesa)
+SLACK_DESKTOP="$APPS_DIR/slack.desktop"
+if [ -f "$SLACK_DESKTOP" ]; then
+    sed -i 's|^Exec=/nix/store/.*/slack|Exec=nixGL /nix/store/[^/]*/slack|' "$SLACK_DESKTOP"
+    # Add Wayland flags directly (NIXOS_OZONE_WL may not be in sway's env)
+    sed -i 's|Exec=nixGL /nix/store/[^/]*/slack|& --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations,WebRTCPipeWireCapturer --enable-wayland-ime=true|' "$SLACK_DESKTOP"
+    echo "  ✓ slack desktop patched (nixGL wrapper + Wayland flags)"
+fi
+
+# Patch chromium to launch via nixGL (GPU compositing needs system Mesa)
+CHROMIUM_DESKTOP="$APPS_DIR/chromium-browser.desktop"
+if [ -f "$CHROMIUM_DESKTOP" ]; then
+    sed -i 's|^Exec=chromium|Exec=nixGL chromium|g' "$CHROMIUM_DESKTOP"
+    echo "  ✓ chromium desktop patched (nixGL wrapper)"
+fi
+
+# Patch 1password to launch via nixGL (Electron GPU compositing needs system Mesa)
+ONEPASSWORD_DESKTOP="$APPS_DIR/1password.desktop"
+if [ -f "$ONEPASSWORD_DESKTOP" ]; then
+    sed -i 's|^Exec=1password|Exec=nixGL 1password|g' "$ONEPASSWORD_DESKTOP"
+    echo "  ✓ 1password desktop patched (nixGL wrapper)"
+fi
+
+# ---------------------------------------------------------------------------
+# 3c. Clean up stale environment.d (superseded by /etc/environment)
+# ---------------------------------------------------------------------------
+# An earlier version of this setup created ~/.config/environment.d/nix.conf
+# with LOCALE_ARCHIVE=%h/... The %h specifier doesn't expand in sway's context,
+# causing locale failures. /etc/environment is the correct location.
+rm -f "$HOME/.config/environment.d/nix.conf" 2>/dev/null && \
+    echo "  ✓ Removed stale environment.d/nix.conf" || true
+
 echo
 
 # ---------------------------------------------------------------------------
@@ -96,7 +163,18 @@ echo
 echo "--- Creating wallpaper directory ---"
 mkdir -p "$HOME/bgs"
 echo "  ✓ ~/bgs created (add your wallpaper image here)"
-echo "  (sway config references ~/bgs/carcig.png)"
+echo "  (sway config references ~/dotfiles/1350497.png)"
+echo
+
+# ---------------------------------------------------------------------------
+# 4b. Bin directory (scripts like power-profiles.sh)
+# ---------------------------------------------------------------------------
+echo "--- Bin directory ---"
+# The dotfiles/bin/ scripts are referenced by .zshrc (added to PATH)
+# and by waybar (custom/power-profile module). No symlinking needed —
+# .zshrc adds $HOME/dotfiles/bin to PATH directly.
+echo "  ✓ ~/dotfiles/bin/ on PATH (via .zshrc)"
+echo "  Scripts: power-profiles.sh (requires power-profiles-daemon on laptops)"
 echo
 
 # ---------------------------------------------------------------------------

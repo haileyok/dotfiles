@@ -37,3 +37,8 @@
 #tray {
   padding-right: 1em;
 }
+
+#custom-power-profile {
+  padding-right: 0.7em;
+  color: @foreground;
+}

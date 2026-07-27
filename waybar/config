@@ -6,7 +6,7 @@
 
     "modules-left": ["memory", "temperature", "sway/workspaces"],
     "modules-center": ["clock"],
-    "modules-right": ["wireplumber", "battery", "backlight", "tray"],
+    "modules-right": ["wireplumber", "battery", "backlight", "custom/power-profile", "tray"],
 
     "sway/workspaces": {
         "format-icons": {
@@ -54,5 +54,15 @@
     "tray": {
         "icon-size": 20,
         "spacing": 16
+    },
+
+    "custom/power-profile": {
+        "exec": "powerprofilesctl get 2>/dev/null | sed 's/performance/⚡/;s/balanced/⚖/;s/power-saver/🌙/'",
+        "interval": 10,
+        "on-click": "power-profiles.sh power-saver",
+        "on-click-right": "power-profiles.sh performance",
+        "on-click-middle": "power-profiles.sh balanced",
+        "tooltip": true,
+        "tooltip-format": "Left: power-saver  Middle: balanced  Right: performance"
     }
 }

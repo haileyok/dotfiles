@@ -55,20 +55,26 @@ echo "$HOME/.nix-profile/bin/zsh" | sudo tee -a /etc/shells
 chsh -s "$HOME/.nix-profile/bin/zsh"
 ```
 
-### 5. Set LOCALE_ARCHIVE for the whole session (requires sudo)
+### 5. Set LOCALE_ARCHIVE and NIXOS_OZONE_WL for the whole session (requires sudo)
 
 Nix binaries use nix's glibc, which doesn't include locale data. The
 `LOCALE_ARCHIVE` env var points them to the nix-installed `glibcLocales`
-archive. Without it, nix programs launched by sway (before any shell
-initialization) crash with "Failed to set locale".
+archive. Without it, nix programs launched by sway crash.
+
+`NIXOS_OZONE_WL=1` enables native Wayland for Electron apps (Slack, Discord,
+Spotify). Without it they launch via XWayland and may not display windows.
+
+Both are set in `.zshrc` for terminal-launched apps, but sway/rofi launches
+don't go through zsh, so they need to be in `/etc/environment` too:
 
 ```bash
-# Add to /etc/environment so PAM/greetd passes it to sway
+# Add to /etc/environment so PAM/greetd passes them to sway
 echo "LOCALE_ARCHIVE=$HOME/.nix-profile/lib/locale/locale-archive" | sudo tee -a /etc/environment
+echo "NIXOS_OZONE_WL=1" | sudo tee -a /etc/environment
 ```
 
 > This requires a reboot to take effect (PAM reads /etc/environment at login).
-> The rofi launcher script also sets it inline as a fallback.
+> The rofi launcher script also exports both as a fallback for the current session.
 
 ### 6. Add your wallpaper
 
@@ -95,6 +101,7 @@ swaymsg -t getoutputs
 | **Desktop** | rofi, flameshot, easyeffects, networkmanagerapplet, blueman, thunar, xdg-desktop-portal-wlr |
 | **Desktop (system/zypper)** | sway, waybar, swayidle, swaylock, swaynotificationcenter — installed via zypper, not nix, to use system Mesa/GPU drivers |
 | **System (zypper)** | tailscale — daemon needs root + systemd (`sudo zypper install tailscale && sudo systemctl enable --now tailscaled`) |
+| **System (zypper, laptops only)** | power-profiles-daemon — power profile switching (`sudo zypper install power-profiles-daemon && sudo systemctl enable --now power-profiles-daemon`). Framework laptops support this natively. Not needed on Framework Desktop. |
 | **Apps** | chromium, 1password-gui, slack, spotify, discord |
 | **Fonts** | FiraCode Nerd Font, JetBrains Mono Nerd Font, Iosevka Nerd Font, Ubuntu |
 | **Zsh plugins** | zsh-autosuggestions, zsh-syntax-highlighting, zsh-autocomplete |
@@ -153,12 +160,35 @@ The following changes were made to the original dotfiles to support nix:
 - Commented out `google-cloud-cli` source — not installed via nix
 - Commented out `conda` initialization block — not installed via nix
 - Fixed typo in `ts` alias (trailing `o`)
+- Added `LOCALE_ARCHIVE` export — nix glibc lacks locale data; points to `glibcLocales` archive
+- Added `NIXOS_OZONE_WL=1` export — enables native Wayland for Electron apps (Slack, Discord, Spotify)
 
 ### `.tmux.conf`
 - tpm init path changed from `/usr/bin/zsh -c "~/.tmux/plugins/tpm/tpm"` to `~/.tmux/plugins/tpm/tpm`
 
 ### `sway/config`
 - `xdg-desktop-portal` path changed from `/usr/lib/xdg-desktop-portal` to `/usr/libexec/xdg-desktop-portal` (openSUSE path)
+- `$term` changed to `nixGL ghostty` — bridges nix binary to system OpenGL/Mesa drivers
+- `$lock` simplified — removed unsupported `--effect-blur`, `--effect-vignette`, `--clock` flags (system swaylock 1.8.6 doesn't support them)
+- Added `exec swayidle -C ~/.config/swayidle/config` — was missing entirely
+- Commented out `workspace 9 output HDMI-A-1` — no external monitor connected
+
+### `swaylock/config`
+- Removed `screenshots=true` — not supported by upstream swaylock
+- Fixed `ring-color` line — had two color values (syntax error)
+- Commented out `indicator-x/y=50` — positioned indicator in top-left corner instead of center
+
+### `swayidle/config`
+- Removed backslash-newline continuations — swayidle doesn't support them, caused parse errors
+
+### `waybar/config`
+- Changed `hyprland/language` module to `sway/language` — was for wrong compositor
+
+### `sway/config.d/keybinds`
+- Removed `bindsym $mod+Return exec xterm` — conflicted with main config's `$term` binding and xterm isn't installed
+
+### `sway/config.d/monitors`
+- Updated from `DP-2`/`HDMI-A-1` to `eDP-1` — matches actual laptop display (2560x1600@165Hz)
 
 ## macOS files (ignored)
 
@@ -169,8 +199,9 @@ These files exist in the repo but are not used on Linux:
 ## Notes
 
 - The `plugins=(git)` block in `.zshrc` is oh-my-zsh syntax; without oh-my-zsh installed it's a harmless no-op (the git aliases are defined manually below it)
-- `sway/config.d/monitors` has hardcoded display outputs (`DP-2`, `HDMI-A-1`) — update these to match your hardware
+- `sway/config.d/monitors` is set for a Framework Laptop 16 (eDP-1, 2560x1600@165Hz) — update to match your hardware
 - System packages (pipewire, dbus, xdg-desktop-portal) are managed by openSUSE/zypper, not nix
+- `~/.local/share/applications/` contains copies of nix desktop files with ghostty patched for `nixGL`; re-run `./setup.sh` after `nix profile install` to refresh them
 
 ## SELinux (openSUSE Tumbleweed)
 
