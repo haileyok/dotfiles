@@ -76,13 +76,29 @@ echo "NIXOS_OZONE_WL=1" | sudo tee -a /etc/environment
 > This requires a reboot to take effect (PAM reads /etc/environment at login).
 > The rofi launcher script also exports both as a fallback for the current session.
 
-### 6. Add your wallpaper
+### 6. Cursor theme (Bibata)
+
+Sway itself picks up the cursor theme from `seat seat0 xcursor_theme` in
+`sway/config`, so it takes effect on `swaymsg reload` once
+`bibata-cursors` is installed (see step 1). GTK apps are covered by the
+`gsettings` calls in `sway/config`, and terminal-launched / XWayland apps
+read `XCURSOR_THEME`/`XCURSOR_SIZE` from `.zshrc`.
+
+For full coverage (e.g. anything launched before a shell exists), optionally
+add the same vars to `/etc/environment` like step 5:
+
+```bash
+echo "XCURSOR_THEME=Bibata-Modern-Classic" | sudo tee -a /etc/environment
+echo "XCURSOR_SIZE=24" | sudo tee -a /etc/environment
+```
+
+### 7. Add your wallpaper
 
 ```bash
 cp /path/to/wallpaper.png ~/bgs/carcig.png
 ```
 
-### 7. Post-install
+### 8. Post-install
 
 ```bash
 # Install tmux plugins: open tmux, press Ctrl-a then I (capital i)

@@ -14,6 +14,12 @@ export LOCALE_ARCHIVE=~/.nix-profile/lib/locale/locale-archive
 # Enable native Wayland for Electron apps (Slack, Discord, Spotify)
 export NIXOS_OZONE_WL=1
 
+# Cursor theme for XWayland apps + terminal-launched programs
+# (sway itself picks this up via `seat seat0 xcursor_theme` in sway/config;
+# this covers apps that read the env vars directly instead)
+export XCURSOR_THEME=Bibata-Modern-Classic
+export XCURSOR_SIZE=24
+
 # Set SHELL to nix zsh so zellij uses it for panes
 export SHELL="$HOME/.nix-profile/bin/zsh"
 

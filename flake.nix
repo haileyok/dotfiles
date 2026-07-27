@@ -62,6 +62,7 @@
         blueman
         thunar
         xdg-desktop-portal-wlr
+        bibata-cursors
       ];
 
       apps = with pkgs; [

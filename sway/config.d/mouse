@@ -1,5 +1,13 @@
 input type:pointer {
     accel_profile flat
     pointer_accel 0.2
-	natural_scroll enabled
+    # Regular (non-natural) scroll direction for a physical mouse wheel.
+    # This is intentionally the opposite of the touchpad setting below:
+    # natural_scroll here was inverting the mouse wheel direction.
+    natural_scroll disabled
 }
+
+# Compositor-rendered cursor theme (client apps pick this up via
+# cursor-shape-v1; XWayland/GTK fallback is handled via env vars + gsettings
+# in sway/config and .zshrc). Installed via `nix profile install .#desktopTools`.
+seat seat0 xcursor_theme "Bibata-Modern-Classic" 24
