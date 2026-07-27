@@ -160,6 +160,13 @@ if [ -f "$SPOTIFY_DESKTOP" ]; then
     echo "  ✓ spotify desktop patched (nixGL wrapper)"
 fi
 
+# Patch signal to launch via nixGL (Electron GPU compositing needs system Mesa)
+SIGNAL_DESKTOP="$APPS_DIR/signal.desktop"
+if [ -f "$SIGNAL_DESKTOP" ]; then
+    sed -i 's|^Exec=signal-desktop|Exec=nixGL signal-desktop|g' "$SIGNAL_DESKTOP"
+    echo "  ✓ signal desktop patched (nixGL wrapper)"
+fi
+
 # ---------------------------------------------------------------------------
 # 3c. Clean up stale environment.d (superseded by /etc/environment)
 # ---------------------------------------------------------------------------

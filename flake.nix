@@ -67,6 +67,7 @@
         slack
         spotify
         discord
+        signal-desktop
       ];
 
       fonts = with pkgs; [

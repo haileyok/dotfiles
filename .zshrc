@@ -11,6 +11,11 @@ export LOCALE_ARCHIVE=~/.nix-profile/lib/locale/locale-archive
 # Enable native Wayland for Electron apps (Slack, Discord, Spotify)
 export NIXOS_OZONE_WL=1
 
+# Auto-start zellij on SSH login
+if [ -n "$SSH_CONNECTION" ] && [ -z "$ZELLIJ" ]; then
+    exec zellij attach -c main
+fi
+
 eval "$(starship init zsh)"
 
 plugins=(
