@@ -12,4 +12,4 @@ window-decoration = false
 background = 000000
 clipboard-read = allow
 clipboard-write = allow
-keybind = shift+enter=text:\n
+keybind = shift+enter=text:\x1b\r
