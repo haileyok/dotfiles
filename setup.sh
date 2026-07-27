@@ -38,6 +38,7 @@ link_file() {
 
 # Home-level files
 link_file "$DOTFILES_DIR/.zshrc"        "$HOME/.zshrc"
+link_file "$DOTFILES_DIR/.bashrc"       "$HOME/.bashrc"
 link_file "$DOTFILES_DIR/.tmux.conf"    "$HOME/.tmux.conf"
 
 # XDG config files
