@@ -32,6 +32,9 @@
         uv
         go
         yarn
+        nodejs
+        deno
+        just
         yubikey-manager
         tmux
         zellij
