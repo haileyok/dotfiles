@@ -121,14 +121,38 @@ README.md              Human-facing install instructions (numbered steps)
   for a physical scroll wheel — the MX Master 3S). If "scroll feels
   backwards" comes up again, check which device is misconfigured; don't
   make them match each other.
-- **Cursor theme is Bibata-Modern-Classic, set in three places that must
+- **Cursor theme is Bibata-Modern-Classic, set in four places that must
   stay in sync:** `seat seat0 xcursor_theme ...` in
-  `sway/config.d/mouse` (compositor-rendered cursor, covers most apps),
-  `gsettings ... cursor-theme/cursor-size` in the `exec_always` block of
-  `sway/config` (GTK apps), and `XCURSOR_THEME`/`XCURSOR_SIZE` in `.zshrc`
-  (XWayland + terminal-launched apps). Changing the theme/size means editing
-  all three, plus adding the theme package to `flake.nix` if it's not
+  `sway/config.d/mouse` (compositor-rendered cursor — the one sway itself
+  draws, authoritative for cursor-shape-v1 clients), `gsettings ...
+  cursor-theme/cursor-size` in the `exec_always` block of `sway/config`
+  (GTK apps that read GSettings directly), `gtk-3.0/settings.ini` and
+  `gtk-4.0/settings.ini` (GTK apps that **don't** — sway runs no XSettings
+  daemon, so GTK3/XWayland/Electron apps commonly ignore gsettings entirely
+  and need the ini file), and `XCURSOR_THEME`/`XCURSOR_SIZE` in `.zshrc`
+  (terminal-launched apps' own shell env). Changing the theme/size means
+  editing all four, plus adding the theme package to `flake.nix` if it's not
   `bibata-cursors`.
+  Note: `XCURSOR_THEME`/`XCURSOR_SIZE` in `.zshrc` only reach processes
+  launched *through zsh* — sway itself (launched by greetd) never sources
+  `.zshrc`, so `/proc/<sway_pid>/environ` won't have them. Confirmed via
+  direct inspection. If an XWayland/Electron app still shows the wrong
+  cursor after all four are set, it was likely launched before the fix (GTK
+  apps read `settings.ini`/gsettings once at startup) — restart it, don't
+  assume the config is wrong.
+- **AMD GPU hardware cursor plane can silently fail to repaint.** This is a
+  known wlroots/amdgpu issue (see swaywm/wlroots#2216, #3189, sway#8410):
+  after a cursor theme change (or sometimes cursor moves), the GPU's
+  hardware cursor plane doesn't update, even though every relevant setting
+  (seat config, gsettings, GTK ini) is correct — confirmed live via `swaymsg`
+  IPC re-apply and app restart still showing the stale cursor. The fix is
+  `WLR_NO_HARDWARE_CURSORS=1`, which forces wlroots to composite the cursor
+  in software each frame instead of using the GPU's cursor plane. Like
+  `LOCALE_ARCHIVE`, this only works via `/etc/environment` (read by PAM
+  before sway starts) plus a full logout/login — `swaymsg reload` cannot fix
+  it, since it's not a config problem. Documented in README.md step 5. If a
+  cursor/theme change "does nothing" even after reload + IPC re-apply +
+  restarting the affected app, suspect this before re-checking config.
 - **Hardware assumptions are baked into configs, not detected.** `monitors`
   hardcodes `eDP-1` at a specific resolution/refresh rate; `mouse`/`touchpad`
   assume this specific laptop + this specific external mouse. When editing

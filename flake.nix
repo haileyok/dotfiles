@@ -44,6 +44,7 @@
         pokemon-colorscripts
         ghostty
         btop
+        yubikey-manager
       ];
 
       # NOTE: sway, waybar, swayidle, swaylock, and swaynotificationcenter are

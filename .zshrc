@@ -82,6 +82,17 @@ alias ts='sudo tailscale'
 alias ghwc='watch -n 3 gh pr checks'
 alias ghc='gh pr checks'
 alias ghco='gh pr checkout'
+# ykman 5.9 moved `oath list` under the accounts subcommand. Keep the
+# older command working while delegating every other invocation unchanged.
+ykman() {
+    if (( $# >= 2 )) && [[ "$1" == oath && "$2" == list ]]; then
+        shift 2
+        command ykman oath accounts list "$@"
+    else
+        command ykman "$@"
+    fi
+}
+
 alias codes='ykman oath accounts code'
 alias doaws='eval $(~/bsky/bsky-infra/scripts/aws-setup-env default)'
 

@@ -1,5 +1,6 @@
 # Laptop display (BOE 0x0BC9, 2560x1600 @ 165Hz)
 output eDP-1 resolution 2560x1600@165Hz pos 0,0
+output DP-3 resolution 3840x2160@239.987Hz pos 2560,-1400
 
 # External monitors - uncomment and adjust when connected:
 #output DP-2 resolution 3840x2160@120Hz pos 0,0

@@ -28,7 +28,7 @@ exec blueman-applet
 
 output * adaptive_sync off
 
-set $wallpaper /home/hailey/dotfiles/1350497.png
+set $wallpaper /home/hailey/dotfiles/bg.jpg
 
 output * bg $wallpaper fill
 

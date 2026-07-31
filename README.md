@@ -30,7 +30,9 @@ on startup with "Failed to create renderer".
 
 ```bash
 # Install system sway + greetd greeter via zypper
-sudo zypper install sway gtkgreet greetd
+# pcsc-ccid is required for ykman OATH/PIV access.
+sudo zypper install sway gtkgreet greetd pcsc-ccid
+sudo systemctl enable --now pcscd.socket
 
 # Link our greetd config
 sudo ln -sf ~/dotfiles/greetd/config.toml /etc/greetd/config.toml
@@ -47,6 +49,13 @@ sudo systemctl enable greetd
 > first, nix sway would shadow the system sway and take precedence — so sway
 > is intentionally excluded from the nix flake. The same applies to waybar,
 > swayidle, swaylock, and swaynotificationcenter.
+>
+> **YubiKey OATH:** Current ykman versions use `ykman oath accounts list`; the
+> shell config keeps the older `ykman oath list` spelling working. The
+> `pcsc-ccid` system package is also required for the YubiKey's CCID interface;
+> it cannot be supplied by the Nix CLI profile alone. If a plugged-in key was
+> present before the udev rules loaded, unplug and reconnect it after
+> installing the package.
 
 ### 4. Set zsh as default shell (requires sudo)
 
@@ -55,7 +64,7 @@ echo "$HOME/.nix-profile/bin/zsh" | sudo tee -a /etc/shells
 chsh -s "$HOME/.nix-profile/bin/zsh"
 ```
 
-### 5. Set LOCALE_ARCHIVE and NIXOS_OZONE_WL for the whole session (requires sudo)
+### 5. Set LOCALE_ARCHIVE, NIXOS_OZONE_WL, and cursor vars for the whole session (requires sudo)
 
 Nix binaries use nix's glibc, which doesn't include locale data. The
 `LOCALE_ARCHIVE` env var points them to the nix-installed `glibcLocales`
@@ -64,33 +73,50 @@ archive. Without it, nix programs launched by sway crash.
 `NIXOS_OZONE_WL=1` enables native Wayland for Electron apps (Slack, Discord,
 Spotify). Without it they launch via XWayland and may not display windows.
 
-Both are set in `.zshrc` for terminal-launched apps, but sway/rofi launches
-don't go through zsh, so they need to be in `/etc/environment` too:
+`WLR_NO_HARDWARE_CURSORS=1` works around a known wlroots/amdgpu bug where the
+GPU's hardware cursor plane doesn't repaint after a cursor theme change (or
+sometimes at all) — see AGENTS.md's "AMD hardware cursor" note. Without it,
+cursor theme changes may silently fail to render even though every config is
+correct. `XCURSOR_THEME`/`XCURSOR_SIZE` ensure XWayland and any process
+sway itself spawns get the right theme from the moment sway starts, not just
+`.zshrc`-launched shells.
+
+All four are set in `.zshrc` for terminal-launched apps (except
+`WLR_NO_HARDWARE_CURSORS`, which only matters to sway itself), but
+sway/rofi launches don't go through zsh, and sway itself never sources
+`.zshrc` at all — so they need to be in `/etc/environment` too:
 
 ```bash
 # Add to /etc/environment so PAM/greetd passes them to sway
 echo "LOCALE_ARCHIVE=$HOME/.nix-profile/lib/locale/locale-archive" | sudo tee -a /etc/environment
 echo "NIXOS_OZONE_WL=1" | sudo tee -a /etc/environment
+echo "WLR_NO_HARDWARE_CURSORS=1" | sudo tee -a /etc/environment
+echo "XCURSOR_THEME=Bibata-Modern-Classic" | sudo tee -a /etc/environment
+echo "XCURSOR_SIZE=24" | sudo tee -a /etc/environment
 ```
 
-> This requires a reboot to take effect (PAM reads /etc/environment at login).
-> The rofi launcher script also exports both as a fallback for the current session.
+> This requires a full logout/login (or reboot) to take effect — PAM reads
+> `/etc/environment` at session start, not on `swaymsg reload`.
+> The rofi launcher script also exports the nix/locale vars as a fallback
+> for the current session.
 
 ### 6. Cursor theme (Bibata)
 
 Sway itself picks up the cursor theme from `seat seat0 xcursor_theme` in
 `sway/config`, so it takes effect on `swaymsg reload` once
 `bibata-cursors` is installed (see step 1). GTK apps are covered by the
-`gsettings` calls in `sway/config`, and terminal-launched / XWayland apps
-read `XCURSOR_THEME`/`XCURSOR_SIZE` from `.zshrc`.
+`gsettings` calls in `sway/config` plus `gtk-3.0/settings.ini` and
+`gtk-4.0/settings.ini` (sway runs no XSettings daemon, so some GTK/XWayland
+apps ignore gsettings and need the ini file directly). Terminal-launched
+apps read `XCURSOR_THEME`/`XCURSOR_SIZE` from `.zshrc`.
 
-For full coverage (e.g. anything launched before a shell exists), optionally
-add the same vars to `/etc/environment` like step 5:
+**If the cursor doesn't visually change even after `reload` and restarting
+apps**, see the `WLR_NO_HARDWARE_CURSORS=1` note in step 5 and AGENTS.md —
+this is a known AMD GPU issue, not a config problem.
 
-```bash
-echo "XCURSOR_THEME=Bibata-Modern-Classic" | sudo tee -a /etc/environment
-echo "XCURSOR_SIZE=24" | sudo tee -a /etc/environment
-```
+For full coverage (e.g. anything launched before a shell exists), the
+`XCURSOR_THEME`/`XCURSOR_SIZE` vars are also added to `/etc/environment` in
+step 5 above.
 
 ### 7. Add your wallpaper
 
@@ -141,7 +167,7 @@ Does NOT include: sway, waybar, rofi, fonts, GUI apps.
 | **CLI tools** | zsh, starship, fzf, eza, bat, gh, uv, go, yarn, yubikey-manager, tmux, zellij, neovim, wl-clipboard, brightnessctl, pokemon-colorscripts |
 | **Desktop** | rofi, flameshot, easyeffects, networkmanagerapplet, blueman, thunar, xdg-desktop-portal-wlr |
 | **Desktop (system/zypper)** | sway, waybar, swayidle, swaylock, swaynotificationcenter — installed via zypper, not nix, to use system Mesa/GPU drivers |
-| **System (zypper)** | tailscale — daemon needs root + systemd (`sudo zypper install tailscale && sudo systemctl enable --now tailscaled`) |
+| **System (zypper)** | pcsc-ccid (required for ykman OATH/PIV), tailscale — daemons need root + systemd (`sudo zypper install pcsc-ccid tailscale && sudo systemctl enable --now pcscd.socket tailscaled`) |
 | **System (zypper, laptops only)** | power-profiles-daemon — power profile switching (`sudo zypper install power-profiles-daemon && sudo systemctl enable --now power-profiles-daemon`). Framework laptops support this natively. Not needed on Framework Desktop. |
 | **Apps** | chromium, 1password-gui, slack, spotify, discord |
 | **Fonts** | FiraCode Nerd Font, JetBrains Mono Nerd Font, Iosevka Nerd Font, Ubuntu |

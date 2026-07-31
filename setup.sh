@@ -51,6 +51,8 @@ link_file "$DOTFILES_DIR/swaync"         "$CONFIG_DIR/swaync"
 link_file "$DOTFILES_DIR/swayidle"       "$CONFIG_DIR/swayidle"
 link_file "$DOTFILES_DIR/swaylock"       "$CONFIG_DIR/swaylock"
 link_file "$DOTFILES_DIR/zellij"         "$CONFIG_DIR/zellij"
+link_file "$DOTFILES_DIR/gtk-3.0"        "$CONFIG_DIR/gtk-3.0"
+link_file "$DOTFILES_DIR/gtk-4.0"        "$CONFIG_DIR/gtk-4.0"
 
 echo
 
@@ -214,6 +216,29 @@ echo
 #
 # Also clone tpm for tmux:
 #   git clone --depth=1 https://github.com/tmux-plugins/tpm.git ~/.tmux/plugins/tpm
+echo
+
+# ---------------------------------------------------------------------------
+# 4d. YubiKey OATH support (requires sudo for package installation)
+# ---------------------------------------------------------------------------
+echo "--- YubiKey OATH support ---"
+if command -v zypper >/dev/null 2>&1; then
+    if command -v rpm >/dev/null 2>&1 && rpm -q pcsc-ccid >/dev/null 2>&1; then
+        echo "  ✓ pcsc-ccid is installed"
+    else
+        echo "  WARNING: pcsc-ccid is not installed — ykman OATH cannot connect"
+        echo "  Run: sudo zypper install pcsc-ccid"
+    fi
+
+    if systemctl is-active --quiet pcscd.socket || systemctl is-active --quiet pcscd.service; then
+        echo "  ✓ pcscd is running"
+    else
+        echo "  To enable the PC/SC service, run:"
+        echo "    sudo systemctl enable --now pcscd.socket"
+    fi
+else
+    echo "  zypper not found — install the platform's pcsc-ccid package manually"
+fi
 echo
 
 # ---------------------------------------------------------------------------
