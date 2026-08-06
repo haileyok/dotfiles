@@ -37,7 +37,24 @@ plugins=(
 # Set-up FZF key bindings (CTRL R for fuzzy history finder)
 source <(fzf --zsh)
 
+# zsh-autocomplete's compdump can outlive a Nix profile upgrade. Its
+# completion helpers then exist on disk but are missing from the dump, causing
+# "command not found" errors during completion. Rebuild it per profile generation.
+zsh_profile_target=$(readlink "$HOME/.nix-profile" 2>/dev/null || print -r -- "$HOME/.nix-profile")
+zsh_compdump="${ZSH_COMPDUMP:-${XDG_CACHE_HOME:-$HOME/.cache}/zsh/compdump}"
+zsh_compdump_marker="${zsh_compdump}.dotfiles-profile"
+zsh_compdump_stale=0
+if [[ ! -r "$zsh_compdump_marker" || "$(<"$zsh_compdump_marker")" != "$zsh_profile_target" ]]; then
+    rm -f "$zsh_compdump" "$zsh_compdump.zwc"
+    zsh_compdump_stale=1
+fi
+
 source ~/.nix-profile/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh
+
+if (( zsh_compdump_stale )); then
+    print -r -- "$zsh_profile_target" >| "$zsh_compdump_marker"
+fi
+unset zsh_profile_target zsh_compdump zsh_compdump_marker zsh_compdump_stale
 source ~/.nix-profile/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source ~/.nix-profile/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 

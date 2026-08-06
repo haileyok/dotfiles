@@ -45,6 +45,7 @@
         ghostty
         btop
         yubikey-manager
+        kitty
       ];
 
       # NOTE: sway, waybar, swayidle, swaylock, and swaynotificationcenter are
