@@ -14,11 +14,29 @@ nix profile install .#default
 nix profile install github:guibou/nixGL
 ```
 
+After changing `flake.nix`, update the existing `dotfiles` profile entry rather
+than installing the flake again:
+
+```bash
+nix profile upgrade dotfiles
+./setup.sh
+```
+
+The setup script refreshes `~/.local/share/applications/`, which is where Rofi's
+`drun` mode finds the copied Nix desktop entries. It also links the active CJK
+and color-emoji files into `~/.local/share/fonts/dotfiles-nix/`, because
+Chromium does not reliably load those faces when they are discovered only
+through the Nix profile's XDG data directory.
+
 ### 2. Symlink configs and clone dependencies
 
 ```bash
 ./setup.sh
 ```
+
+Re-run `./setup.sh` after `nix profile upgrade dotfiles` so the user-font links
+follow the current profile. Fully quit and restart Chromium after changing
+fonts; an existing browser process keeps its old font list.
 
 ### 3. Install display manager (requires sudo)
 
@@ -169,8 +187,8 @@ Does NOT include: sway, waybar, rofi, fonts, GUI apps.
 | **Desktop (system/zypper)** | sway, waybar, swayidle, swaylock, swaynotificationcenter — installed via zypper, not nix, to use system Mesa/GPU drivers |
 | **System (zypper)** | pcsc-ccid (required for ykman OATH/PIV), tailscale — daemons need root + systemd (`sudo zypper install pcsc-ccid tailscale && sudo systemctl enable --now pcscd.socket tailscaled`) |
 | **System (zypper, laptops only)** | power-profiles-daemon — power profile switching (`sudo zypper install power-profiles-daemon && sudo systemctl enable --now power-profiles-daemon`). Framework laptops support this natively. Not needed on Framework Desktop. |
-| **Apps** | chromium, 1password-gui, slack, spotify, discord |
-| **Fonts** | FiraCode Nerd Font, JetBrains Mono Nerd Font, Iosevka Nerd Font, Ubuntu |
+| **Apps** | chromium, 1password-gui, slack, spotify, discord, signal-desktop, zoom-us |
+| **Fonts** | FiraCode Nerd Font, JetBrains Mono Nerd Font, Iosevka Nerd Font, Ubuntu, Source Han Sans CJK, Noto Color Emoji |
 | **Zsh plugins** | zsh-autosuggestions, zsh-syntax-highlighting, zsh-autocomplete |
 | **Locale data** | glibcLocales (fixes locale warnings from nix binaries) |
 
@@ -268,7 +286,7 @@ These files exist in the repo but are not used on Linux:
 - The `plugins=(git)` block in `.zshrc` is oh-my-zsh syntax; without oh-my-zsh installed it's a harmless no-op (the git aliases are defined manually below it)
 - `sway/config.d/monitors` is set for a Framework Laptop 16 (eDP-1, 2560x1600@165Hz) — update to match your hardware
 - System packages (pipewire, dbus, xdg-desktop-portal) are managed by openSUSE/zypper, not nix
-- `~/.local/share/applications/` contains copies of nix desktop files with ghostty patched for `nixGL`; re-run `./setup.sh` after `nix profile install` to refresh them
+- `~/.local/share/applications/` contains copies of Nix desktop files patched for this machine; re-run `./setup.sh` after `nix profile upgrade dotfiles` to refresh them. Zoom is launched through XWayland with software Qt rendering because its bundled Qt/ANGLE renderer crashes on GLX under Sway.
 
 ## SELinux (openSUSE Tumbleweed)
 

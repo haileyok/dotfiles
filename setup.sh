@@ -57,6 +57,34 @@ link_file "$DOTFILES_DIR/gtk-4.0"        "$CONFIG_DIR/gtk-4.0"
 echo
 
 # ---------------------------------------------------------------------------
+# 1b. User font links for Chromium/fontconfig
+# ---------------------------------------------------------------------------
+# Chromium does not reliably load CJK faces when they are discovered only
+# through the Nix profile's XDG data directory. Link the active CJK and emoji
+# files into the standard per-user font directory instead. The links are
+# refreshed on every setup run so they follow profile upgrades.
+echo "--- Linking Nix fonts into the user font directory ---"
+USER_FONT_DIR="$HOME/.local/share/fonts/dotfiles-nix"
+mkdir -p "$USER_FONT_DIR"
+
+for font in \
+    "$HOME/.nix-profile/share/fonts/truetype/SourceHanSans.ttc" \
+    "$HOME/.nix-profile/share/fonts/noto/NotoColorEmoji.ttf"; do
+    if [ -f "$font" ]; then
+        ln -sfn "$font" "$USER_FONT_DIR/$(basename "$font")"
+        echo "  ✓ $(basename "$font")"
+    else
+        echo "  WARNING: font not found: $font"
+    fi
+done
+
+if command -v fc-cache >/dev/null 2>&1; then
+    fc-cache -f "$USER_FONT_DIR"
+    echo "  ✓ fontconfig cache refreshed"
+fi
+echo
+
+# ---------------------------------------------------------------------------
 # 2. tmux plugin manager (tpm)
 # ---------------------------------------------------------------------------
 echo "--- Setting up tmux plugin manager (tpm) ---"
@@ -112,9 +140,14 @@ echo "--- Patching desktop files for nix compatibility ---"
 APPS_DIR="$HOME/.local/share/applications"
 mkdir -p "$APPS_DIR"
 
-# Copy nix desktop files to user-local dir (writable, takes precedence via XDG_DATA_HOME)
+# Copy nix desktop files to user-local dir (writable, takes precedence via XDG_DATA_HOME).
+# Remove existing copies first because cp cannot overwrite files whose mode was
+# preserved as non-writable from the Nix store.
 for f in "$HOME"/.nix-profile/share/applications/*.desktop; do
-    [ -f "$f" ] && cp "$f" "$APPS_DIR/" 2>/dev/null
+    if [ -f "$f" ]; then
+        rm -f "$APPS_DIR/$(basename "$f")"
+        cp "$f" "$APPS_DIR/"
+    fi
 done
 
 # Patch ghostty to launch via nixGL (OpenGL bridge to system Mesa drivers)
@@ -129,9 +162,9 @@ fi
 # Patch slack to launch via nixGL (Electron GPU compositing needs system Mesa)
 SLACK_DESKTOP="$APPS_DIR/slack.desktop"
 if [ -f "$SLACK_DESKTOP" ]; then
-    sed -i 's|^Exec=/nix/store/.*/slack|Exec=nixGL /nix/store/[^/]*/slack|' "$SLACK_DESKTOP"
-    # Add Wayland flags directly (NIXOS_OZONE_WL may not be in sway's env)
-    sed -i 's|Exec=nixGL /nix/store/[^/]*/slack|& --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations,WebRTCPipeWireCapturer --enable-wayland-ime=true|' "$SLACK_DESKTOP"
+    # Use the stable profile symlink instead of embedding a /nix/store path.
+    # Desktop files do not expand shell variables, so resolve HOME here.
+    sed -i 's|^Exec=.*|Exec=nixGL '"$HOME"'/.nix-profile/bin/slack --ozone-platform-hint=auto --enable-features=WaylandWindowDecorations,WebRTCPipeWireCapturer --enable-wayland-ime=true -s %U|' "$SLACK_DESKTOP"
     echo "  ✓ slack desktop patched (nixGL wrapper + Wayland flags)"
 fi
 
@@ -168,6 +201,15 @@ SIGNAL_DESKTOP="$APPS_DIR/signal.desktop"
 if [ -f "$SIGNAL_DESKTOP" ]; then
     sed -i 's|^Exec=signal-desktop|Exec=nixGL signal-desktop|g' "$SIGNAL_DESKTOP"
     echo "  ✓ signal desktop patched (nixGL wrapper)"
+fi
+
+# Zoom's Qt/ANGLE renderer crashes on GLX under Sway/XWayland on this AMD
+# system. Use the X11 Qt backend with software rendering; unlike the other
+# Electron apps, wrapping Zoom with nixGL does not fix its embedded launcher.
+ZOOM_DESKTOP="$APPS_DIR/Zoom.desktop"
+if [ -f "$ZOOM_DESKTOP" ]; then
+    sed -i 's|^Exec=zoom|Exec=env QT_QPA_PLATFORM=xcb QT_QUICK_BACKEND=software QT_OPENGL=software LIBGL_ALWAYS_SOFTWARE=1 zoom|g' "$ZOOM_DESKTOP"
+    echo "  ✓ Zoom desktop patched (XWayland + software rendering)"
 fi
 
 # ---------------------------------------------------------------------------

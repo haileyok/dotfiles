@@ -73,6 +73,8 @@
         spotify
         discord
         signal-desktop
+        zoom-us
+        qalculate-qt
       ];
 
       fonts = with pkgs; [
@@ -80,6 +82,9 @@
         nerd-fonts.jetbrains-mono
         nerd-fonts.iosevka
         ubuntu-classic
+        # Source Han Sans renders reliably in Chromium and other desktop apps.
+        source-han-sans
+        noto-fonts-color-emoji
       ];
 
       zshPlugins = with pkgs; [

@@ -1,5 +1,8 @@
 font-size = 12
 font-family = "FiraCode Nerd Font"
+# Explicit fallbacks keep CJK text and color emoji readable.
+font-family = "Source Han Sans SC"
+font-family = "Noto Color Emoji"
 cursor-style-blink = true
 cursor-click-to-move = true
 mouse-hide-while-typing = true

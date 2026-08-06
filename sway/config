@@ -11,6 +11,8 @@ set $menu bash /home/hailey/.config/rofi/launchers/type-2/launcher.sh
 
 set $highlight #b21858
 
+set $wallpaper /home/hailey/dotfiles/bg.jpg
+
 set $lock swaylock -f -i $wallpaper -s fill
 # set $lock swaylock --clock --indicator --effect-scale 1 --effect-vignette 0.5:0.5 --effect-blur 4x2 --datestr "" --timestr "%k:%M" -i $wallpaper -s fill
 
@@ -27,8 +29,6 @@ exec nm-applet --indicator
 exec blueman-applet
 
 output * adaptive_sync off
-
-set $wallpaper /home/hailey/dotfiles/bg.jpg
 
 output * bg $wallpaper fill
 
