@@ -87,10 +87,27 @@
         noto-fonts-color-emoji
       ];
 
+      # nixpkgs' 26.08.03 zsh-autocomplete source contains z-async as a
+      # submodule, but its installPhase omits the submodule contents. Without
+      # this function the plugin emits "function definition file not found"
+      # whenever asynchronous completion runs.
+      zAsync = pkgs.fetchFromGitHub {
+        owner = "marlonrichert";
+        repo = "z-async";
+        rev = "5370537de80670b4a97e49cd253d15067709c0a6";
+        hash = "sha256-tPosFoZSaUShaRpv7ca9BdOMREfmhnzjd/VKHSshhXo=";
+      };
+
+      zshAutocomplete = pkgs.zsh-autocomplete.overrideAttrs (old: {
+        installPhase = old.installPhase + ''
+          install -Dm755 ${zAsync}/z-async $out/share/zsh-autocomplete/z-async/z-async
+        '';
+      });
+
       zshPlugins = with pkgs; [
         zsh-autosuggestions
         zsh-syntax-highlighting
-        zsh-autocomplete
+        zshAutocomplete
       ];
 
       # nix glibc doesn't include locale data, causing locale warnings.
