@@ -7,6 +7,7 @@ export PATH="$HOME/.nix-profile/bin:$PATH"
 export EDITOR=nvim
 export PATH=$PATH:/home/hailey/go/bin
 export PATH=$HOME/dotfiles/bin:$PATH
+export PATH=:/home/hailey/.local/bin/:$PATH
 
 # Fix locale warnings from nix binaries (nix glibc lacks locale data)
 export LOCALE_ARCHIVE=~/.nix-profile/lib/locale/locale-archive
@@ -32,13 +33,24 @@ export SHELL="$HOME/.nix-profile/bin/zsh"
 # that no longer exists and `ssh -A` appears not to forward anything.
 # Symlinking each new login's live socket to a fixed path means panes resolve
 # the symlink at connect time and always reach the current agent.
-if [ -n "$SSH_AUTH_SOCK" ] && [ -S "$SSH_AUTH_SOCK" ] \
-   && [ "$SSH_AUTH_SOCK" != "$HOME/.ssh/agent.sock" ]; then
-    mkdir -p "$HOME/.ssh"
-    ln -sf "$SSH_AUTH_SOCK" "$HOME/.ssh/agent.sock"
-fi
-if [ -L "$HOME/.ssh/agent.sock" ]; then
-    export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+# Gated on SSH_CONNECTION so this is a no-op for local desktop terminals on the
+# laptop, where 1Password manages its own agent socket (~/.1password/agent.sock)
+# and `sag` may start an ad-hoc ssh-agent. Pinning there would shadow an agent
+# something else already owns, and would let an inbound SSH session repoint the
+# stable path at a *remote* forwarded agent that dies with that connection.
+# Zellij's server environment carries SSH_CONNECTION, so panes still qualify.
+if [ -n "$SSH_CONNECTION" ]; then
+    if [ -n "$SSH_AUTH_SOCK" ] && [ -S "$SSH_AUTH_SOCK" ] \
+       && [ "$SSH_AUTH_SOCK" != "$HOME/.ssh/agent.sock" ]; then
+        mkdir -p "$HOME/.ssh"
+        ln -sf "$SSH_AUTH_SOCK" "$HOME/.ssh/agent.sock"
+    fi
+    # -L, not -S: a pane should adopt the stable path even while it is briefly
+    # dangling, so the next SSH login that refreshes the symlink retroactively
+    # repairs that pane. -S would strand it on a dead socket forever.
+    if [ -L "$HOME/.ssh/agent.sock" ]; then
+        export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+    fi
 fi
 
 # Auto-start zellij on SSH login
