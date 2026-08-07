@@ -23,6 +23,24 @@ export XCURSOR_SIZE=24
 # Set SHELL to nix zsh so zellij uses it for panes
 export SHELL="$HOME/.nix-profile/bin/zsh"
 
+# Pin the forwarded SSH agent to a stable path BEFORE exec'ing zellij.
+#
+# Zellij is client/server: panes inherit the *server's* environment, which is
+# frozen at whatever SSH session first created the session. A forwarded agent
+# socket dies with its SSH session (Tailscale SSH uses
+# /tmp/auth-agent<random>/listener.sock), so panes end up pointing at a socket
+# that no longer exists and `ssh -A` appears not to forward anything.
+# Symlinking each new login's live socket to a fixed path means panes resolve
+# the symlink at connect time and always reach the current agent.
+if [ -n "$SSH_AUTH_SOCK" ] && [ -S "$SSH_AUTH_SOCK" ] \
+   && [ "$SSH_AUTH_SOCK" != "$HOME/.ssh/agent.sock" ]; then
+    mkdir -p "$HOME/.ssh"
+    ln -sf "$SSH_AUTH_SOCK" "$HOME/.ssh/agent.sock"
+fi
+if [ -L "$HOME/.ssh/agent.sock" ]; then
+    export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+fi
+
 # Auto-start zellij on SSH login
 if [ -n "$SSH_CONNECTION" ] && [ -z "$ZELLIJ" ]; then
     exec "$HOME/.nix-profile/bin/zellij" attach -c main
@@ -37,10 +55,21 @@ plugins=(
 # Set-up FZF key bindings (CTRL R for fuzzy history finder)
 source <(fzf --zsh)
 
-# zsh-autocomplete's compdump can outlive a Nix profile upgrade. Its
-# completion helpers then exist on disk but are missing from the dump, causing
-# "command not found" errors during completion. Rebuild it per profile generation.
-zsh_profile_target=$(readlink "$HOME/.nix-profile" 2>/dev/null || print -r -- "$HOME/.nix-profile")
+# zsh-autocomplete's compdump can outlive a Nix profile upgrade. The dump
+# records `autoload -Uz _autocomplete__<fn>` lines naming helper functions from
+# whichever plugin version was installed when it was written. After an upgrade
+# that renames or drops those helpers, the dump still names them but the files
+# are gone from $fpath, so completion errors with
+# "_autocomplete__command: function definition file not found".
+# Rebuild the dump whenever the profile generation changes.
+#
+# NOTE: this must be `readlink -f`, not plain `readlink`. ~/.nix-profile is a
+# symlink chain: ~/.nix-profile -> ~/.local/state/nix/profiles/profile ->
+# profile-N-link -> /nix/store/<hash>-profile. Plain `readlink` stops at the
+# first hop, which is the SAME stable path for every generation, so the marker
+# always compared equal and the dump was never actually rebuilt. Only the fully
+# resolved store path changes per generation.
+zsh_profile_target=$(readlink -f "$HOME/.nix-profile" 2>/dev/null || print -r -- "$HOME/.nix-profile")
 zsh_compdump="${ZSH_COMPDUMP:-${XDG_CACHE_HOME:-$HOME/.cache}/zsh/compdump}"
 zsh_compdump_marker="${zsh_compdump}.dotfiles-profile"
 zsh_compdump_stale=0
@@ -51,6 +80,10 @@ fi
 
 source ~/.nix-profile/share/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 
+# Record the generation unconditionally. The dump itself is written lazily by
+# zsh-autocomplete's precmd hook, i.e. AFTER this file finishes, so testing for
+# the dump's existence here would never succeed and we would wipe and fully
+# rebuild the dump on every single shell start.
 if (( zsh_compdump_stale )); then
     print -r -- "$zsh_profile_target" >| "$zsh_compdump_marker"
 fi
