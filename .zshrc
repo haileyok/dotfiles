@@ -168,7 +168,7 @@ alias ppsv='power-profiles.sh power-saver'
 
 alias ylq='yarn lint --quiet'
 
-alias sag='eval `ssh-agent -s` && ssh-add'
+alias sag='eval "$(ssh-agent -s)" && ssh-add'
 
 alias pubip='curl ipv4.icanhazip.com'
 
