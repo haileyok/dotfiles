@@ -53,6 +53,7 @@ link_file "$DOTFILES_DIR/swaylock"       "$CONFIG_DIR/swaylock"
 link_file "$DOTFILES_DIR/zellij"         "$CONFIG_DIR/zellij"
 link_file "$DOTFILES_DIR/gtk-3.0"        "$CONFIG_DIR/gtk-3.0"
 link_file "$DOTFILES_DIR/gtk-4.0"        "$CONFIG_DIR/gtk-4.0"
+link_file "$DOTFILES_DIR/polytoken/skills" "$CONFIG_DIR/polytoken/skills"
 
 echo
 

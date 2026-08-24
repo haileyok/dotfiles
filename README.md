@@ -226,6 +226,7 @@ nix profile install .#zshPlugins
 | `swayidle/` | `~/.config/swayidle` |
 | `swaylock/` | `~/.config/swaylock` |
 | `zellij/` | `~/.config/zellij` |
+| `polytoken/skills/` | `~/.config/polytoken/skills` |
 | `greetd/config.toml` | `/etc/greetd/config.toml` (manual sudo symlink) |
 | `selinux/nix-store-exec.te` | SELinux module source (compiled and installed by `setup.sh`) |
 
