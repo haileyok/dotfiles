@@ -1,0 +1,14 @@
+# Git identity and behavior shared across machines.
+# Symlinked to ~/.config/git/config by setup.sh (XDG location git reads
+# natively, after ~/.gitconfig). Machine-specific overrides still go in
+# ~/.gitconfig, which takes precedence over this file.
+
+[user]
+	email = me@haileyok.com
+	name = hailey
+
+[init]
+	defaultBranch = main
+
+[push]
+	autoSetupRemote = true

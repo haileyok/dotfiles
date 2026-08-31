@@ -101,6 +101,17 @@ README.md              Human-facing install instructions (numbered steps)
   with locale warnings/errors. This is set in `.zshrc` (shell-launched
   processes) and documented in `README.md` step 5 for `/etc/environment`
   (sway/greetd-launched processes, which don't go through zsh).
+- **Ghostty terminfo must live in `~/.terminfo`, not `/etc/terminfo`.** When
+  SSH'ing into a machine from Ghostty, `TERM=xterm-ghostty` must resolve under
+  *nix* ncurses (which does NOT search `/etc/terminfo` or other distro paths).
+  If it doesn't, `zsh/terminfo` returns empty capabilities and zsh-autocomplete
+  duplicates every typed character and breaks autosuggestions (ghostty#3335).
+  The source is vendored at `terminfo/xterm-ghostty.terminfo`; `setup.sh` step
+  1c compiles it into `~/.terminfo`, and `.zshrc` self-heals on first start if
+  the entry is missing (so the minimal symlink-only setup path is covered).
+  Keep all three in sync when Ghostty is upgraded in `flake.nix` — regenerate
+  the vendored source from the new profile:
+  `TERMINFO=$HOME/.nix-profile/share/terminfo infocmp -x xterm-ghostty > terminfo/xterm-ghostty.terminfo`
 - **Do not use `~/.config/environment.d/` for session env vars.** It was
   tried and abandoned: the `%h` specifier didn't expand correctly in sway's
   launch context, breaking `LOCALE_ARCHIVE`. `setup.sh` actively deletes a
@@ -212,8 +223,13 @@ Electron/Chromium-based apps do).
   but have **no bootstrap automation** — no macOS equivalent of `setup.sh`
   exists yet. Treat them as reference configs to manually symlink/adapt, not
   as something `setup.sh` maintains.
-- `~/.gitconfig` is **not** managed by this repo (not symlinked, not in
-  `setup.sh`) — it's local per-machine identity config.
+- **Git identity is repo-managed** via `git/config` symlinked to
+  `~/.config/git/config` (the XDG path git reads natively, after
+  `~/.gitconfig`). `[user] email = me@haileyok.com`, `name = hailey`, plus
+  `init.defaultBranch = main` and `push.autoSetupRemote = true`. Machine-local
+  overrides (e.g. work-specific identity) still go in `~/.gitconfig`, which
+  takes precedence over the XDG file. Don't put secrets or machine-specific
+  settings in `git/config`.
 
 ## When making changes here
 

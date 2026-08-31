@@ -8,9 +8,37 @@ export EDITOR=nvim
 export PATH=$PATH:/home/hailey/go/bin
 export PATH=$HOME/dotfiles/bin:$PATH
 export PATH=:/home/hailey/.local/bin/:$PATH
+export PATH="$HOME/.local/bin:$PATH"
 
 # Fix locale warnings from nix binaries (nix glibc lacks locale data)
 export LOCALE_ARCHIVE=~/.nix-profile/lib/locale/locale-archive
+
+# Ghostty terminfo for nix zsh (fixes duplicated characters + broken
+# zsh-autocomplete over SSH from Ghostty).
+#
+# Ghostty sets TERM=xterm-ghostty, but remote machines usually lack that
+# terminfo entry in the directories *nix* ncurses searches (nix's ncurses
+# does not look in /etc/terminfo or other distro paths). With the entry
+# unresolvable, zsh/terminfo returns empty capabilities and zsh-autocomplete
+# miscounts cursor positions: every typed character appears multiple times
+# and autosuggestions render broken (ghostty#3335/#3338).
+#
+# The compiled entry lives in ~/.terminfo, which every ncurses (nix's
+# included) searches by default. setup.sh installs it too, but .zshrc also
+# self-heals here so a fresh machine that only ran the minimal symlink list
+# (no setup.sh) is covered. Costs one [ -f ] test per shell start.
+_zshrc_ghostty_terminfo="$HOME/.terminfo/x/xterm-ghostty"
+if [[ "$TERM" == xterm-ghostty* ]] && [[ ! -e "$_zshrc_ghostty_terminfo" ]] \
+   && command -v tic >/dev/null 2>&1; then
+    _zshrc_terminfo_src="$HOME/dotfiles/terminfo/xterm-ghostty.terminfo"
+    if [[ -r "$_zshrc_terminfo_src" ]]; then
+        TERMINFO="$HOME/.terminfo" tic -x -o "$HOME/.terminfo" "$_zshrc_terminfo_src" >/dev/null 2>&1
+    elif infocmp -x xterm-ghostty >/dev/null 2>&1; then
+        # Vendored source unavailable: rebuild from an existing system entry.
+        infocmp -x xterm-ghostty | TERMINFO="$HOME/.terminfo" tic -x -o "$HOME/.terminfo" -
+    fi
+fi
+unset _zshrc_ghostty_terminfo _zshrc_terminfo_src
 
 # Enable native Wayland for Electron apps (Slack, Discord, Spotify)
 export NIXOS_OZONE_WL=1

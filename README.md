@@ -167,9 +167,28 @@ ln -sf ~/dotfiles/.tmux.conf ~/.tmux.conf
 ln -sf ~/dotfiles/starship.toml ~/.config/starship.toml
 ln -sf ~/dotfiles/nvim ~/.config/nvim
 ln -sf ~/dotfiles/zellij ~/.config/zellij
+ln -sf ~/dotfiles/git ~/.config/git   # git identity (user.email/name)
 
 # Clone tmux plugin manager
 git clone --depth=1 https://github.com/tmux-plugins/tpm.git ~/.tmux/plugins/tpm
+```
+
+### Ghostty terminfo (important if you SSH into this machine from Ghostty)
+
+The minimal profile installs Ghostty's terminfo entry into the *nix* profile,
+but nix ncurses doesn't search `/etc/terminfo`, so when a remote Ghostty sets
+`TERM=xterm-ghostty` over SSH, zsh can't resolve it — characters typed into
+zsh-autocomplete panes get duplicated and autosuggestions break
+([ghostty#3335](https://github.com/ghostty-org/ghostty/issues/3335)). The
+entry must land in `~/.terminfo`, which every ncurses searches.
+
+No action needed: `.zshrc` self-heals on first start (compiles the vendored
+`terminfo/xterm-ghostty.terminfo` from this repo into `~/.terminfo` when
+missing). `setup.sh` also installs it explicitly (step 1c). To install
+manually:
+
+```bash
+TERMINFO=~/.terminfo tic -x -o ~/.terminfo ~/dotfiles/terminfo/xterm-ghostty.terminfo
 ```
 
 Includes: zsh, starship, fzf, eza, bat, gh, uv, go, yarn, yubikey-manager,

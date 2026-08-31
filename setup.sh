@@ -51,6 +51,7 @@ link_file "$DOTFILES_DIR/swaync"         "$CONFIG_DIR/swaync"
 link_file "$DOTFILES_DIR/swayidle"       "$CONFIG_DIR/swayidle"
 link_file "$DOTFILES_DIR/swaylock"       "$CONFIG_DIR/swaylock"
 link_file "$DOTFILES_DIR/zellij"         "$CONFIG_DIR/zellij"
+link_file "$DOTFILES_DIR/git"            "$CONFIG_DIR/git"
 link_file "$DOTFILES_DIR/gtk-3.0"        "$CONFIG_DIR/gtk-3.0"
 link_file "$DOTFILES_DIR/gtk-4.0"        "$CONFIG_DIR/gtk-4.0"
 link_file "$DOTFILES_DIR/polytoken/skills" "$CONFIG_DIR/polytoken/skills"
@@ -82,6 +83,34 @@ done
 if command -v fc-cache >/dev/null 2>&1; then
     fc-cache -f "$USER_FONT_DIR"
     echo "  ✓ fontconfig cache refreshed"
+fi
+echo
+
+# ---------------------------------------------------------------------------
+# 1c. Ghostty terminfo for nix zsh (SSH machines / remote servers)
+# ---------------------------------------------------------------------------
+# Ghostty sets TERM=xterm-ghostty, but remote machines usually lack that
+# terminfo entry where *nix* ncurses can find it (nix ncurses does not search
+# /etc/terminfo). Unresolvable terminfo makes zsh/terminfo return empty
+# capabilities, and zsh-autocomplete then miscounts cursor positions: every
+# typed character appears multiple times and autosuggestions render broken
+# (ghostty#3335/#3338). The compiled entry in ~/.terminfo is visible to every
+# ncurses, nix's included. Idempotent: re-runs only refresh the entry.
+echo "--- Installing xterm-ghostty terminfo into ~/.terminfo ---"
+if command -v tic >/dev/null 2>&1; then
+    GHOSTTY_TERMINFO_SRC="$DOTFILES_DIR/terminfo/xterm-ghostty.terminfo"
+    # Prefer the vendored source; fall back to a system entry if present.
+    if [ -r "$GHOSTTY_TERMINFO_SRC" ]; then
+        TERMINFO="$HOME/.terminfo" tic -x -o "$HOME/.terminfo" "$GHOSTTY_TERMINFO_SRC" >/dev/null 2>&1 \
+            && echo "  ✓ xterm-ghostty installed (from vendored source)"
+    elif infocmp -x xterm-ghostty >/dev/null 2>&1; then
+        infocmp -x xterm-ghostty | TERMINFO="$HOME/.terminfo" tic -x -o "$HOME/.terminfo" - \
+            && echo "  ✓ xterm-ghostty installed (from system entry)"
+    else
+        echo "  WARNING: no xterm-ghostty terminfo source available — skipped"
+    fi
+else
+    echo "  WARNING: tic not found — install ncurses; terminfo skipped"
 fi
 echo
 
@@ -256,6 +285,7 @@ echo
 #   ln -sf ~/dotfiles/starship.toml ~/.config/starship.toml
 #   ln -sf ~/dotfiles/nvim ~/.config/nvim
 #   ln -sf ~/dotfiles/zellij ~/.config/zellij
+#   ln -sf ~/dotfiles/git ~/.config/git   # git identity (user.email/name)
 #
 # Also clone tpm for tmux:
 #   git clone --depth=1 https://github.com/tmux-plugins/tpm.git ~/.tmux/plugins/tpm
