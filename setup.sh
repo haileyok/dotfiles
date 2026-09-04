@@ -233,6 +233,13 @@ if [ -f "$SIGNAL_DESKTOP" ]; then
     echo "  ✓ signal desktop patched (nixGL wrapper)"
 fi
 
+# Patch bitwarden to launch via nixGL (Electron GPU compositing needs system Mesa)
+BITWARDEN_DESKTOP="$APPS_DIR/bitwarden.desktop"
+if [ -f "$BITWARDEN_DESKTOP" ]; then
+    sed -i 's|^Exec=bitwarden|Exec=nixGL bitwarden|g' "$BITWARDEN_DESKTOP"
+    echo "  ✓ bitwarden desktop patched (nixGL wrapper)"
+fi
+
 # Zoom's Qt/ANGLE renderer crashes on GLX under Sway/XWayland on this AMD
 # system. Use the X11 Qt backend with software rendering; unlike the other
 # Electron apps, wrapping Zoom with nixGL does not fix its embedded launcher.

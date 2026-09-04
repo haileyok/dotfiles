@@ -104,8 +104,10 @@
         spotify
         discord
         signal-desktop
+        bitwarden-desktop
         zoom-us
         qalculate-qt
+        vlc
       ];
 
       fonts = with pkgs; [
