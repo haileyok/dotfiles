@@ -14,6 +14,12 @@ export PATH="$HOME/.local/bin:$PATH"
 # Fix locale warnings from nix binaries (nix glibc lacks locale data)
 export LOCALE_ARCHIVE=~/.nix-profile/lib/locale/locale-archive
 
+# Do not run terminfo/plugins/zellij setup for non-interactive SSH commands.
+# scp and sftp require a completely byte-clean remote session.
+if [[ ! -o interactive ]]; then
+    return
+fi
+
 # Ghostty terminfo for nix zsh (fixes duplicated characters + broken
 # zsh-autocomplete over SSH from Ghostty).
 #
@@ -85,12 +91,6 @@ fi
 # Auto-start zellij on interactive SSH login, never for scp/SFTP/remote commands.
 if [[ -o interactive ]] && [ -n "$SSH_CONNECTION" ] && [ -z "$ZELLIJ" ]; then
     exec "$HOME/.nix-profile/bin/zellij" attach -c main
-fi
-
-# Never run interactive prompt/plugin/UI setup for non-interactive SSH commands.
-# This keeps scp, sftp, and `ssh host command` protocols byte-clean.
-if [[ ! -o interactive ]]; then
-    return
 fi
 
 eval "$(starship init zsh)"
