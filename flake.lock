@@ -16,9 +16,27 @@
         "type": "github"
       }
     },
+    "roast": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787282810,
+        "narHash": "sha256-q60i9wrHHTazB1Ydt8XBXyV+A815OWpqmv25mYPQGIU=",
+        "ref": "refs/tags/v1.0.11",
+        "rev": "bff5a277badf86d0e16da42aa6ae3752abea294d",
+        "revCount": 151,
+        "type": "git",
+        "url": "https://github.com/bluesky-social/roast.git"
+      },
+      "original": {
+        "ref": "refs/tags/v1.0.11",
+        "type": "git",
+        "url": "https://github.com/bluesky-social/roast.git"
+      }
+    },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "roast": "roast"
       }
     }
   },

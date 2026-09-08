@@ -3,14 +3,42 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    roast = {
+      url = "git+https://github.com/bluesky-social/roast.git?ref=refs/tags/v1.0.11";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, roast }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
+      };
+
+      # Roast declares Go 1.26.5 and vendors its dependencies. The versioned
+      # builder keeps the package aligned with that toolchain and avoids a
+      # network dependency during the build.
+      roastVersion = "1.0.11";
+      roastPackage = pkgs.buildGo126Module {
+        pname = "roast";
+        version = roastVersion;
+        src = roast;
+        vendorHash = null;
+        subPackages = [ "cmd/roast" ];
+        ldflags = [
+          "-s"
+          "-w"
+          "-X github.com/bluesky-social/roast/internal/buildinfo.Version=v${roastVersion}"
+          "-X github.com/bluesky-social/roast/internal/buildinfo.Commit=bff5a277"
+          "-X github.com/bluesky-social/roast/internal/buildinfo.Date=2026-08-21T03:27:00Z"
+        ];
+        meta = {
+          description = "Adversarial cross-model code review CLI";
+          homepage = "https://github.com/bluesky-social/roast";
+          mainProgram = "roast";
+        };
       };
 
       # All packages needed for the dotfiles, grouped by category.
@@ -46,6 +74,7 @@
         btop
         yubikey-manager
         kitty
+        roastPackage
       ];
 
       # NOTE: sway, waybar, swayidle, swaylock, and swaynotificationcenter are
