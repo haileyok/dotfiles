@@ -82,8 +82,8 @@ if [ -n "$SSH_CONNECTION" ]; then
     fi
 fi
 
-# Auto-start zellij on SSH login
-if [ -n "$SSH_CONNECTION" ] && [ -z "$ZELLIJ" ]; then
+# Auto-start zellij on interactive SSH login, never for scp/SFTP/remote commands.
+if [[ -o interactive ]] && [ -n "$SSH_CONNECTION" ] && [ -z "$ZELLIJ" ]; then
     exec "$HOME/.nix-profile/bin/zellij" attach -c main
 fi
 
