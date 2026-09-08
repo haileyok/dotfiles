@@ -87,6 +87,12 @@ if [[ -o interactive ]] && [ -n "$SSH_CONNECTION" ] && [ -z "$ZELLIJ" ]; then
     exec "$HOME/.nix-profile/bin/zellij" attach -c main
 fi
 
+# Never run interactive prompt/plugin/UI setup for non-interactive SSH commands.
+# This keeps scp, sftp, and `ssh host command` protocols byte-clean.
+if [[ ! -o interactive ]]; then
+    return
+fi
+
 eval "$(starship init zsh)"
 
 plugins=(
