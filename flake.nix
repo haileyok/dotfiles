@@ -4,7 +4,8 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     roast = {
-      url = "git+https://github.com/bluesky-social/roast.git?ref=refs/tags/v1.0.11";
+      # Pin the merged Polytoken support until the next Roast release tag.
+      url = "git+https://github.com/bluesky-social/roast.git?rev=d0ae8c995808a1243d7f90daffc389674ef029b3";
       flake = false;
     };
   };
@@ -31,8 +32,8 @@
           "-s"
           "-w"
           "-X github.com/bluesky-social/roast/internal/buildinfo.Version=v${roastVersion}"
-          "-X github.com/bluesky-social/roast/internal/buildinfo.Commit=bff5a277"
-          "-X github.com/bluesky-social/roast/internal/buildinfo.Date=2026-08-21T03:27:00Z"
+          "-X github.com/bluesky-social/roast/internal/buildinfo.Commit=d0ae8c9"
+          "-X github.com/bluesky-social/roast/internal/buildinfo.Date=2026-09-08T01:29:41Z"
         ];
         meta = {
           description = "Adversarial cross-model code review CLI";
