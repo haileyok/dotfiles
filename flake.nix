@@ -5,7 +5,7 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     roast = {
       # Pin the merged Polytoken support until the next Roast release tag.
-      url = "git+https://github.com/bluesky-social/roast.git?rev=d0ae8c995808a1243d7f90daffc389674ef029b3";
+      url = "git+ssh://git@github.com/bluesky-social/roast.git?rev=d0ae8c995808a1243d7f90daffc389674ef029b3";
       flake = false;
     };
   };

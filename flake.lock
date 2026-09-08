@@ -2,11 +2,11 @@
   "nodes": {
     "nixpkgs": {
       "locked": {
-        "lastModified": 1787900134,
-        "narHash": "sha256-VYXO0XZlgj06dxJZRhrD3WoSsvq/c7+/Akyoa22pefw=",
+        "lastModified": 1788881743,
+        "narHash": "sha256-2V9GZGvPfrNzxFozhI9dcqV+c3QdA8YZrvAAzqEB+dI=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "83199d0d373dd3ac2b9a1996b1d0263f76ab7a4c",
+        "rev": "d6524aaca2ff07876657ae2b323f24be4874944b",
         "type": "github"
       },
       "original": {
@@ -25,12 +25,12 @@
         "rev": "d0ae8c995808a1243d7f90daffc389674ef029b3",
         "revCount": 153,
         "type": "git",
-        "url": "https://github.com/bluesky-social/roast.git"
+        "url": "ssh://git@github.com/bluesky-social/roast.git"
       },
       "original": {
         "rev": "d0ae8c995808a1243d7f90daffc389674ef029b3",
         "type": "git",
-        "url": "https://github.com/bluesky-social/roast.git"
+        "url": "ssh://git@github.com/bluesky-social/roast.git"
       }
     },
     "root": {
