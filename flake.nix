@@ -76,6 +76,7 @@
         yubikey-manager
         kitty
         roastPackage
+        coder
       ];
 
       # NOTE: sway, waybar, swayidle, swaylock, and swaynotificationcenter are
