@@ -37,7 +37,9 @@ fi
 
 # ---------------------------------------------------------------------------
 # 2. Minimal package profile (zsh, starship, fzf, eza, bat, gh, tmux, zellij,
-#    neovim, ghostty, coder, roast, zsh plugins — see flake.nix `minimal`)
+#    neovim, ghostty, coder, zsh plugins — see flake.nix `minimal`; roast is
+#    deliberately excluded: private-repo + credentials, not for keyless
+#    workspace bootstrap)
 #    Install once; do NOT upgrade on every start (slow, and AGENTS.md warns
 #    against re-running `nix profile install` for an existing entry).
 # ---------------------------------------------------------------------------

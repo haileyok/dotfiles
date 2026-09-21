@@ -10,7 +10,13 @@
     };
   };
 
-  outputs = { self, nixpkgs, roast }:
+  # NOTE: `outputs` must use `...@inputs` and reference `roast` lazily (via
+  # `inputs.roast`, only inside roastTools). The roast input is a private
+  # repo over SSH (git+ssh:git@github.com/bluesky-social/roast.git); with a
+  # direct `outputs = { self, nixpkgs, roast }:` binding, nix fetches every
+  # input during evaluation, so keyless machines (e.g. Coder workspaces
+  # installing `.#minimal`) would fail before installing anything.
+  outputs = { self, nixpkgs, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -25,7 +31,7 @@
       roastPackage = pkgs.buildGo126Module {
         pname = "roast";
         version = roastVersion;
-        src = roast;
+        src = inputs.roast;
         vendorHash = null;
         subPackages = [ "cmd/roast" ];
         ldflags = [
@@ -75,8 +81,15 @@
         btop
         yubikey-manager
         kitty
-        roastPackage
         coder
+      ];
+
+      # Roast is deliberately NOT in cliTools: it requires cloning a private
+      # repo (SSH auth) and per-user gateway credentials, so it must stay out
+      # of `.#minimal` and any keyless-machine install. Desktop machines get
+      # it via `.#default` / `.#roastTools`.
+      roastTools = [
+        roastPackage
       ];
 
       # NOTE: sway, waybar, swayidle, swaylock, and swaynotificationcenter are
@@ -156,7 +169,7 @@
       # Not included in buildEnv because it uses a different flake input.
 
       # Convenience: everything in one derivation
-      allPackages = cliTools ++ desktopTools ++ apps ++ fonts ++ zshPlugins ++ localeData;
+      allPackages = cliTools ++ roastTools ++ desktopTools ++ apps ++ fonts ++ zshPlugins ++ localeData;
 
       # Minimal set for machines where you only have a user account (no sudo).
       # No desktop tools, no GUI apps, no Wayland-specific packages.
@@ -203,6 +216,12 @@
         zshPlugins = pkgs.buildEnv {
           name = "dotfiles-zsh-plugins";
           paths = zshPlugins;
+        };
+
+        roastTools = pkgs.buildEnv {
+          name = "dotfiles-roast-tools";
+          paths = roastTools;
+          meta.description = "Roast only — requires private-repo SSH auth; not for keyless machines";
         };
       };
     };
