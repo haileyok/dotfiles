@@ -197,18 +197,27 @@ if [ -n "$ROOT_SHELL" ] && [ "$ROOT_SHELL" != "/bin/bash" ] && [ "$ROOT_SHELL" !
     sed -i "s|^root:\(.*\):$ROOT_SHELL\$|root:\1:/bin/bash|" /etc/passwd \
         && echo "  ✓ root login shell reset to /bin/bash (was $ROOT_SHELL)"
 fi
-# Ensure interactive shells get nix on PATH and drop into zsh when available.
-BASHRC_NIX_BLOCK='# --- added by dotfiles bootstrap (coder workspace) ---'
-if ! grep -q "$BASHRC_NIX_BLOCK" "$HOME/.bashrc" 2>/dev/null; then
-    {
-        echo ""
-        echo "$BASHRC_NIX_BLOCK"
-        echo '. "$HOME/.nix-profile/etc/profile.d/nix.sh" 2>/dev/null || true'
-        echo "command -v zsh >/dev/null 2>&1 && [ -x \"\$HOME/.nix-profile/bin/zsh\" ] && exec \"\$HOME/.nix-profile/bin/zsh\" -l"
-    } >> "$HOME/.bashrc"
-    echo "  ✓ nix PATH + zsh auto-exec added to ~/.bashrc"
+# Ensure shells get nix on PATH and drop into zsh when available.
+#
+# SSH login shells source ~/.profile (or ~/.bash_profile) — NOT ~/.bashrc.
+# ~/.bashrc is only read by interactive non-login shells, and it is a symlink
+# into the dotfiles repo, so appending workspace-local lines there would
+# modify the clone. Instead write a standalone ~/.profile (a real file, not
+# repo-managed) that sources nix, chains .bashrc, and execs zsh when present.
+# ~/.bash_profile would shadow ~/.profile for bash logins, so remove it if
+# an earlier version of this bootstrap created one.
+PROFILE_MARKER='# --- added by dotfiles bootstrap (coder workspace) ---'
+if [ ! -f "$HOME/.profile" ] || ! grep -q "$PROFILE_MARKER" "$HOME/.profile"; then
+    rm -f "$HOME/.bash_profile"   # would shadow .profile for bash logins
+    cat > "$HOME/.profile" <<PROFILE
+$PROFILE_MARKER
+. "\$HOME/.nix-profile/etc/profile.d/nix.sh" 2>/dev/null || true
+[ -f "\$HOME/.bashrc" ] && . "\$HOME/.bashrc"
+command -v zsh >/dev/null 2>&1 && [ -x "\$HOME/.nix-profile/bin/zsh" ] && exec "\$HOME/.nix-profile/bin/zsh" -l
+PROFILE
+    echo "  ✓ ~/.profile written (nix PATH + .bashrc chain + zsh exec)"
 else
-    echo "  ✓ ~/.bashrc already configured"
+    echo "  ✓ ~/.profile already configured"
 fi
 echo
 
