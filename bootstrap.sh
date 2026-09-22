@@ -69,6 +69,16 @@ fi
 . "$HOME/.nix-profile/etc/profile.d/nix.sh" \
     || . /nix/var/nix/profiles/default/etc/profile.d/nix.sh
 
+# Fresh single-user installs have no user nix.conf, so the experimental
+# `nix-command` and `flakes` features are off and `nix profile install .#…`
+# (a flake reference) fails. Enable them for this user — same as the desktop
+# setup's ~/.config/nix/nix.conf. The profile install below is the only nix
+# command that needs it at bootstrap time.
+if [ ! -f "$HOME/.config/nix/nix.conf" ]; then
+    mkdir -p "$HOME/.config/nix"
+    printf 'experimental-features = nix-command flakes\n' > "$HOME/.config/nix/nix.conf"
+fi
+
 # ---------------------------------------------------------------------------
 # 2. Minimal package profile (zsh, starship, fzf, eza, bat, gh, tmux, zellij,
 #    neovim, ghostty, coder, zsh plugins — see flake.nix `minimal`; roast is
