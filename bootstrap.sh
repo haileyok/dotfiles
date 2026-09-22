@@ -29,6 +29,15 @@ echo
 # ---------------------------------------------------------------------------
 if ! command -v nix >/dev/null 2>&1 && [ ! -x "$HOME/.nix-profile/bin/nix" ]; then
     echo "--- Installing nix (single-user, --no-daemon) ---"
+    # The nix installer unpacks an xz-compressed tarball; bare Ubuntu
+    # containers lack xz-utils (and the installer's curl progress needs curl,
+    # which the workspace template provides). Install prerequisites first —
+    # apt in a container needs no sudo when running as root.
+    if command -v apt-get >/dev/null 2>&1; then
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -qq
+        apt-get install -y -qq --no-install-recommends xz-utils ca-certificates
+    fi
     sh <(curl -L https://nixos.org/nix/install) --no-daemon
 fi
 # shellcheck disable=SC1091
