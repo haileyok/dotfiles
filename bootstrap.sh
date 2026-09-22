@@ -46,7 +46,13 @@ if ! command -v nix >/dev/null 2>&1 && [ ! -x "$HOME/.nix-profile/bin/nix" ]; th
     # first; the installer then completes, and binary substitution from
     # cache.nixos.org works without ever needing the daemon.
     if [ "$(id -u)" = "0" ]; then
-        rm -rf /nix "$HOME/.nix-profile" # clean slate from any failed attempt
+        # Clean slate from any failed attempt. NOTE: in Coder workspaces /nix
+        # is a persistent volume mountpoint (the template's subPath mount), so
+        # the directory itself cannot be removed — only its contents. We only
+        # reach this branch when nix is not installed, so anything inside is
+        # partial garbage from a failed attempt.
+        rm -rf "$HOME/.nix-profile"
+        find /nix -mindepth 1 -delete 2>/dev/null || true
         if ! getent group nixbld >/dev/null 2>&1; then
             groupadd -r nixbld
             for n in $(seq 1 32); do
