@@ -38,7 +38,26 @@ if ! command -v nix >/dev/null 2>&1 && [ ! -x "$HOME/.nix-profile/bin/nix" ]; th
         apt-get update -qq
         apt-get install -y -qq --no-install-recommends xz-utils ca-certificates
     fi
-    sh <(curl -L https://nixos.org/nix/install) --no-daemon
+    # The single-user installer is not root-aware: when the nix binary runs
+    # as root it insists on the multi-user nixbld build group (the bundled
+    # nix.conf sets build-users-group = nixbld), and aborts with "the group
+    # 'nixbld' ... does not exist". The standard container fix (same as the
+    # official Nix docker images) is to create the group and build users
+    # first; the installer then completes, and binary substitution from
+    # cache.nixos.org works without ever needing the daemon.
+    if [ "$(id -u)" = "0" ]; then
+        rm -rf /nix "$HOME/.nix-profile" # clean slate from any failed attempt
+        if ! getent group nixbld >/dev/null 2>&1; then
+            groupadd -r nixbld
+            for n in $(seq 1 32); do
+                useradd -r -g nixbld -G nixbld -c "Nix build user $n" \
+                    -d /var/empty -s /usr/sbin/nologin "nixbld$n"
+            done
+        fi
+        sh <(curl -L https://nixos.org/nix/install) --no-daemon
+    else
+        sh <(curl -L https://nixos.org/nix/install) --no-daemon
+    fi
 fi
 # shellcheck disable=SC1091
 . "$HOME/.nix-profile/etc/profile.d/nix.sh" \
