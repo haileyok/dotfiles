@@ -4,18 +4,20 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     roast = {
-      # Pin the merged Polytoken support until the next Roast release tag.
-      url = "git+ssh://git@github.com/bluesky-social/roast.git?rev=d0ae8c995808a1243d7f90daffc389674ef029b3";
+      # Roast remains a private repo (anonymous HTTPS 404s; git+ssh via the
+      # Coder git key works). Pin the current main rev; GitHub exposes this
+      # ref, unlike the old d0ae8c9 pin which a history rewrite removed.
+      url = "git+ssh://git@github.com/bluesky-social/roast.git?rev=fe38df0b9cf13ae70f767b10f27ab5705c8d55cf";
       flake = false;
     };
   };
 
   # NOTE: `outputs` must use `...@inputs` and reference `roast` lazily (via
-  # `inputs.roast`, only inside roastTools). The roast input is a private
-  # repo over SSH (git+ssh:git@github.com/bluesky-social/roast.git); with a
-  # direct `outputs = { self, nixpkgs, roast }:` binding, nix fetches every
-  # input during evaluation, so keyless machines (e.g. Coder workspaces
-  # installing `.#minimal`) would fail before installing anything.
+  # `inputs.roast`, only inside roastTools). With a direct
+  # `outputs = { self, nixpkgs, roast }:` binding, nix fetches every input
+  # during evaluation, so keyless machines would fetch roast before
+  # installing `.#minimal`. The roast input is public now, but keeping it
+  # lazy still keeps `.#minimal` installs free of the roast fetch/build path.
   outputs = { self, nixpkgs, ... }@inputs:
     let
       system = "x86_64-linux";
@@ -24,22 +26,20 @@
         config.allowUnfree = true;
       };
 
-      # Roast declares Go 1.26.5 and vendors its dependencies. The versioned
-      # builder keeps the package aligned with that toolchain and avoids a
-      # network dependency during the build.
-      roastVersion = "1.0.11";
-      roastPackage = pkgs.buildGo126Module {
+      # The public release no longer vendors dependencies (the old pin had a
+      # committed vendor/ tree; the new one has an inconsistent one), so nix
+      # fetches them via go mod download and we must track the vendor hash.
+      roastPackage = pkgs.buildGo127Module {
         pname = "roast";
-        version = roastVersion;
+        version = "0.0.0-dev";
         src = inputs.roast;
-        vendorHash = null;
+        vendorHash = "sha256-rpmONFVRfMPvlFMz31kSYZ9VQTc1UB92Q34bw6v/l0E=";
         subPackages = [ "cmd/roast" ];
         ldflags = [
           "-s"
           "-w"
-          "-X github.com/bluesky-social/roast/internal/buildinfo.Version=v${roastVersion}"
-          "-X github.com/bluesky-social/roast/internal/buildinfo.Commit=d0ae8c9"
-          "-X github.com/bluesky-social/roast/internal/buildinfo.Date=2026-09-08T01:29:41Z"
+          "-X github.com/bluesky-social/roast/internal/buildinfo.Version=0.0.0-dev"
+          "-X github.com/bluesky-social/roast/internal/buildinfo.Commit=fe38df0"
         ];
         meta = {
           description = "Adversarial cross-model code review CLI";

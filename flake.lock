@@ -19,16 +19,16 @@
     "roast": {
       "flake": false,
       "locked": {
-        "lastModified": 1788830981,
-        "narHash": "sha256-NDdX9+txMqhwxCS+pSDV0FQk2ZxvuROoRwUF9H1T4PE=",
+        "lastModified": 1790023571,
+        "narHash": "sha256-mPMv5KpDps8eYDU6+tnWYuQ+r4+0WOKrPNJRJ7unZtQ=",
         "ref": "refs/heads/main",
-        "rev": "d0ae8c995808a1243d7f90daffc389674ef029b3",
-        "revCount": 153,
+        "rev": "fe38df0b9cf13ae70f767b10f27ab5705c8d55cf",
+        "revCount": 1,
         "type": "git",
         "url": "ssh://git@github.com/bluesky-social/roast.git"
       },
       "original": {
-        "rev": "d0ae8c995808a1243d7f90daffc389674ef029b3",
+        "rev": "fe38df0b9cf13ae70f767b10f27ab5705c8d55cf",
         "type": "git",
         "url": "ssh://git@github.com/bluesky-social/roast.git"
       }
