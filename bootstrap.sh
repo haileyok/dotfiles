@@ -179,17 +179,36 @@ fi
 echo
 
 # ---------------------------------------------------------------------------
-# 7. Default shell (cosmetic; container has no PAM/login manager)
+# 7. Shell setup: nix on PATH via .bashrc — NEVER chsh in a workspace.
 # ---------------------------------------------------------------------------
-NIX_ZSH="$HOME/.nix-profile/bin/zsh"
-echo "--- Default shell ---"
-if [ "$SHELL" = "$NIX_ZSH" ]; then
-    echo "  ✓ zsh is already the default shell"
-elif [ -x "$NIX_ZSH" ]; then
-    grep -qx "$NIX_ZSH" /etc/shells || echo "$NIX_ZSH" >> /etc/shells
-    chsh -s "$NIX_ZSH" && echo "  ✓ zsh set as default shell"
+# chsh writes /etc/passwd in the disposable container layer. If a workspace
+# agent restarts (or the pod is recreated) at any moment when the nix profile
+# link is not yet resolvable — /nix still mounting, profile mid-upgrade — the
+# login shell points at a missing binary and every SSH session dies instantly
+# with exit 127, locking you out of an otherwise-healthy workspace. This
+# happened in production: bootstrap completed and chsh'd, agent restarted
+# minutes later, all logins failed. Instead, keep /bin/bash as the login
+# shell and put nix + zsh on PATH through .bashrc so a broken nix degrades
+# to "tools missing", never "cannot log in".
+echo "--- Shell setup ---"
+# Repair a /etc/passwd left pointing at the nix zsh by an older bootstrap.
+ROOT_SHELL="$(grep '^root:' /etc/passwd | cut -d: -f7)"
+if [ -n "$ROOT_SHELL" ] && [ "$ROOT_SHELL" != "/bin/bash" ] && [ "$ROOT_SHELL" != "/bin/sh" ]; then
+    sed -i "s|^root:\(.*\):$ROOT_SHELL\$|root:\1:/bin/bash|" /etc/passwd \
+        && echo "  ✓ root login shell reset to /bin/bash (was $ROOT_SHELL)"
+fi
+# Ensure interactive shells get nix on PATH and drop into zsh when available.
+BASHRC_NIX_BLOCK='# --- added by dotfiles bootstrap (coder workspace) ---'
+if ! grep -q "$BASHRC_NIX_BLOCK" "$HOME/.bashrc" 2>/dev/null; then
+    {
+        echo ""
+        echo "$BASHRC_NIX_BLOCK"
+        echo '. "$HOME/.nix-profile/etc/profile.d/nix.sh" 2>/dev/null || true'
+        echo "command -v zsh >/dev/null 2>&1 && [ -x \"\$HOME/.nix-profile/bin/zsh\" ] && exec \"\$HOME/.nix-profile/bin/zsh\" -l"
+    } >> "$HOME/.bashrc"
+    echo "  ✓ nix PATH + zsh auto-exec added to ~/.bashrc"
 else
-    echo "  WARNING: $NIX_ZSH not found — keeping current shell"
+    echo "  ✓ ~/.bashrc already configured"
 fi
 echo
 
