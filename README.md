@@ -24,7 +24,10 @@ nix profile upgrade dotfiles
 
 ### Roast code review
 
-The CLI tools include Roast, the internal adversarial cross-model code reviewer.
+The CLI tools include Roast, the internal adversarial cross-model code
+reviewer (in `.#default`; not in `.#minimal` — it needs the private
+`bluesky-social/roast` repo over SSH plus per-user credentials, so install it
+with `nix profile install .#roastTools` only on machines with SSH access).
 After upgrading the existing profile, complete its user-level setup interactively:
 
 ```bash
@@ -209,8 +212,10 @@ TERMINFO=~/.terminfo tic -x -o ~/.terminfo ~/dotfiles/terminfo/xterm-ghostty.ter
 ```
 
 Includes: zsh, starship, fzf, eza, bat, gh, uv, go, yarn, yubikey-manager,
-tmux, zellij, neovim, btop, ghostty, roast, zsh plugins, glibcLocales.
-Does NOT include: sway, waybar, rofi, fonts, GUI apps.
+tmux, zellij, neovim, btop, ghostty, coder, zsh plugins, glibcLocales.
+Does NOT include: sway, waybar, rofi, fonts, GUI apps, or roast (roast needs a
+private-repo clone plus per-user credentials — install it separately with
+`nix profile install .#roastTools` on machines with SSH access).
 
 ## What's included
 
@@ -218,7 +223,8 @@ Does NOT include: sway, waybar, rofi, fonts, GUI apps.
 
 | Group | Packages |
 |-------|----------|
-| **CLI tools** | zsh, starship, fzf, eza, bat, gh, uv, go, yarn, yubikey-manager, tmux, zellij, neovim, wl-clipboard, brightnessctl, pokemon-colorscripts, roast |
+| **CLI tools** | zsh, starship, fzf, eza, bat, gh, uv, go, yarn, yubikey-manager, tmux, zellij, neovim, wl-clipboard, brightnessctl, pokemon-colorscripts, ghostty, btop, kitty, coder |
+| **Roast (separate group)** | roast — built from the private `bluesky-social/roast` repo over SSH; included in `.#default` and `.#roastTools` only, never `.#minimal` |
 | **Desktop** | rofi, flameshot, easyeffects, networkmanagerapplet, blueman, thunar, xdg-desktop-portal-wlr |
 | **Desktop (system/zypper)** | sway, waybar, swayidle, swaylock, swaynotificationcenter — installed via zypper, not nix, to use system Mesa/GPU drivers |
 | **System (zypper)** | pcsc-ccid (required for ykman OATH/PIV), tailscale — daemons need root + systemd (`sudo zypper install pcsc-ccid tailscale && sudo systemctl enable --now pcscd.socket tailscaled`) |

@@ -4,13 +4,21 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     roast = {
-      # Pin the merged Polytoken support until the next Roast release tag.
-      url = "git+ssh://git@github.com/bluesky-social/roast.git?rev=d0ae8c995808a1243d7f90daffc389674ef029b3";
+      # Roast remains a private repo (anonymous HTTPS 404s; git+ssh via the
+      # Coder git key works). Pin the current main rev; GitHub exposes this
+      # ref, unlike the old d0ae8c9 pin which a history rewrite removed.
+      url = "git+ssh://git@github.com/bluesky-social/roast.git?rev=fe38df0b9cf13ae70f767b10f27ab5705c8d55cf";
       flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, roast }:
+  # NOTE: `outputs` must use `...@inputs` and reference `roast` lazily (via
+  # `inputs.roast`, only inside roastTools). With a direct
+  # `outputs = { self, nixpkgs, roast }:` binding, nix fetches every input
+  # during evaluation, so keyless machines would fetch roast before
+  # installing `.#minimal`. The roast input is public now, but keeping it
+  # lazy still keeps `.#minimal` installs free of the roast fetch/build path.
+  outputs = { self, nixpkgs, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -18,22 +26,20 @@
         config.allowUnfree = true;
       };
 
-      # Roast declares Go 1.26.5 and vendors its dependencies. The versioned
-      # builder keeps the package aligned with that toolchain and avoids a
-      # network dependency during the build.
-      roastVersion = "1.0.11";
-      roastPackage = pkgs.buildGo126Module {
+      # The public release no longer vendors dependencies (the old pin had a
+      # committed vendor/ tree; the new one has an inconsistent one), so nix
+      # fetches them via go mod download and we must track the vendor hash.
+      roastPackage = pkgs.buildGo127Module {
         pname = "roast";
-        version = roastVersion;
-        src = roast;
-        vendorHash = null;
+        version = "0.0.0-dev";
+        src = inputs.roast;
+        vendorHash = "sha256-rpmONFVRfMPvlFMz31kSYZ9VQTc1UB92Q34bw6v/l0E=";
         subPackages = [ "cmd/roast" ];
         ldflags = [
           "-s"
           "-w"
-          "-X github.com/bluesky-social/roast/internal/buildinfo.Version=v${roastVersion}"
-          "-X github.com/bluesky-social/roast/internal/buildinfo.Commit=d0ae8c9"
-          "-X github.com/bluesky-social/roast/internal/buildinfo.Date=2026-09-08T01:29:41Z"
+          "-X github.com/bluesky-social/roast/internal/buildinfo.Version=0.0.0-dev"
+          "-X github.com/bluesky-social/roast/internal/buildinfo.Commit=fe38df0"
         ];
         meta = {
           description = "Adversarial cross-model code review CLI";
@@ -75,9 +81,17 @@
         btop
         yubikey-manager
         kitty
-        roastPackage
         coder
         v4l-utils
+        gcx
+      ];
+
+      # Roast is deliberately NOT in cliTools: it requires cloning a private
+      # repo (SSH auth) and per-user gateway credentials, so it must stay out
+      # of `.#minimal` and any keyless-machine install. Desktop machines get
+      # it via `.#default` / `.#roastTools`.
+      roastTools = [
+        roastPackage
       ];
 
       # NOTE: sway, waybar, swayidle, swaylock, and swaynotificationcenter are
@@ -157,7 +171,7 @@
       # Not included in buildEnv because it uses a different flake input.
 
       # Convenience: everything in one derivation
-      allPackages = cliTools ++ desktopTools ++ apps ++ fonts ++ zshPlugins ++ localeData;
+      allPackages = cliTools ++ roastTools ++ desktopTools ++ apps ++ fonts ++ zshPlugins ++ localeData;
 
       # Minimal set for machines where you only have a user account (no sudo).
       # No desktop tools, no GUI apps, no Wayland-specific packages.
@@ -204,6 +218,12 @@
         zshPlugins = pkgs.buildEnv {
           name = "dotfiles-zsh-plugins";
           paths = zshPlugins;
+        };
+
+        roastTools = pkgs.buildEnv {
+          name = "dotfiles-roast-tools";
+          paths = roastTools;
+          meta.description = "Roast only — requires private-repo SSH auth; not for keyless machines";
         };
       };
     };
