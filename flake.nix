@@ -82,6 +82,7 @@
         yubikey-manager
         kitty
         coder
+        gcx
       ];
 
       # Roast is deliberately NOT in cliTools: it requires cloning a private
