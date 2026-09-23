@@ -6,6 +6,7 @@ import fcntl
 import json
 import os
 import re
+import shutil
 from difflib import SequenceMatcher
 from pathlib import Path
 import signal
@@ -448,8 +449,12 @@ def stop(state):
     if focus_id() != target:
         notify("Focus changed; text was not inserted")
         return
-    # wtype emits character keys only. No clipboard modification or Enter.
-    subprocess.run(["wtype", "-"], input=edited, text=True, check=True, timeout=30)
+    # Prefer wtype with its fixed per-key sleeps removed; use stock wtype on
+    # machines without the optional fast package. Both emit keys, not paste.
+    # Set VOICE_TYPE_STOCK_WTYPE=1 to disable the fast path if an app needs it.
+    typer = (shutil.which("wtype-fast") if not os.environ.get("VOICE_TYPE_STOCK_WTYPE")
+             else None) or "wtype"
+    subprocess.run([typer, "-"], input=edited, text=True, check=True, timeout=30)
     set_status("done")
     notify("Transcription typed")
 

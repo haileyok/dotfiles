@@ -26,6 +26,24 @@
         config.allowUnfree = true;
       };
 
+      # Keep virtual-keyboard event acknowledgements while removing wtype's
+      # unconditional 2 ms sleeps after every press and release. This leaves
+      # clipboard contents untouched and preserves ordered keystrokes.
+      fastWtype = pkgs.wtype.overrideAttrs (old: {
+        pname = "wtype-fast";
+        postPatch = (old.postPatch or "") + ''
+          substituteInPlace main.c --replace-fail 'usleep(2000);' '/* No fixed key delay. */'
+          # Keep the virtual keyboard/keymap alive briefly for XWayland clients.
+          substituteInPlace main.c --replace-fail \
+            'zwp_virtual_keyboard_v1_destroy(wtype.keyboard);' \
+            'usleep(200000); zwp_virtual_keyboard_v1_destroy(wtype.keyboard);'
+        '';
+        postInstall = (old.postInstall or "") + ''
+          mv $out/bin/wtype $out/bin/wtype-fast
+          rm -f $out/share/man/man1/wtype.1*
+        '';
+      });
+
       # The public release no longer vendors dependencies (the old pin had a
       # committed vendor/ tree; the new one has an inconsistent one), so nix
       # fetches them via go mod download and we must track the vendor hash.
@@ -103,6 +121,7 @@
       # Additionally, nix sway shadows the system sway on PATH, so the broken
       # nix version would take precedence.
       desktopTools = with pkgs; [
+        fastWtype
         rofi
         flameshot
         easyeffects
@@ -181,6 +200,7 @@
     in
     {
       packages.${system} = {
+        wtype-fast = fastWtype;
         default = pkgs.buildEnv {
           name = "dotfiles-env";
           paths = allPackages;
