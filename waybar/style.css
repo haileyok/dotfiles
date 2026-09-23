@@ -38,6 +38,12 @@
   padding-right: 1em;
 }
 
+#custom-voice-backend {
+  padding: 0 0.7em;
+  color: #7aa2f7;
+}
+#custom-voice-backend.npu { color: #bb9af7; }
+
 #custom-voice-type {
   padding: 0 0.7em;
   color: #fabd2f;

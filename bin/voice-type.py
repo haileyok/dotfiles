@@ -25,6 +25,10 @@ EDITOR_URL = "http://127.0.0.1:52628"
 # Always use the laptop's built-in digital mic, never the current default source.
 MIC = "alsa_input.pci-0000_c1_00.6.HiFi__Mic1__source"
 URL = "http://127.0.0.1:52625"
+GPU_URL = "http://127.0.0.1:52629"
+MODE_FILE = ROOT / "backend-mode"
+GPU_IDLE_CONFIG = Path.home() / ".config/voice-type/gpu-idle-minutes"
+GPU_WORKER = Path(__file__).with_name("voice-gpu-server.py")
 STATUS = ROOT / "status.json"
 STAGES = {
     "recording": ("● Recording", "Voice typing is recording; press the hotkey to stop"),
@@ -69,6 +73,93 @@ def show_status():
     except (OSError, KeyError, ValueError, TypeError):
         pass
     print(json.dumps(result))
+
+
+def selected_mode():
+    try:
+        mode = MODE_FILE.read_text().strip()
+        return mode if mode in ("auto", "npu", "gpu") else "auto"
+    except OSError:
+        return "auto"
+
+
+def on_ac():
+    # ACAD is the laptop's charger; USB-C entries include downstream power roles.
+    try:
+        return (Path("/sys/class/power_supply/ACAD/online").read_text().strip() == "1")
+    except OSError:
+        return False  # Safest automatic default if power status is unavailable.
+
+
+def chosen_backend():
+    mode = selected_mode()
+    return ("gpu" if on_ac() else "npu") if mode == "auto" else mode
+
+
+def gpu_idle_minutes():
+    try:
+        value = int(GPU_IDLE_CONFIG.read_text().strip())
+        return value if 1 <= value <= 60 else 10
+    except (OSError, ValueError):
+        return 10
+
+
+def gpu_available():
+    return (Path.home() / ".local/share/voice-gpu/bin/whisper-server").is_file() and (
+        Path.home() / ".local/share/voice-gpu/models/ggml-large-v3-turbo.bin").is_file()
+
+
+def gpu_ready():
+    try:
+        with urllib.request.urlopen(GPU_URL + "/health", timeout=1) as response:
+            return json.load(response).get("status") == "ok"
+    except (OSError, ValueError):
+        return False
+
+
+def ensure_gpu():
+    if not gpu_available() or not GPU_WORKER.is_file():
+        raise RuntimeError("GPU Whisper installation unavailable")
+    last_use = ROOT / "gpu-last-use"
+    last_use.touch(exist_ok=True)
+    os.utime(last_use, None)
+    if gpu_ready():
+        return
+    with open(ROOT / "gpu-worker.log", "ab") as log:
+        subprocess.Popen([sys.executable, str(GPU_WORKER)], stdin=subprocess.DEVNULL,
+                         stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+                         env=dict(os.environ, VOICE_GPU_IDLE_MINUTES=str(gpu_idle_minutes())))
+    for _ in range(60):
+        if gpu_ready():
+            return
+        time.sleep(0.25)
+    raise RuntimeError("GPU Whisper server did not become ready")
+
+
+def backend_label():
+    mode = selected_mode()
+    backend = chosen_backend()
+    label = f"🎙 {'Auto · ' if mode == 'auto' else ''}{backend.upper()}"
+    hint = (f"Voice typing: {mode.upper()} → {backend.upper()} ({'AC' if on_ac() else 'battery'}). "
+            f"Click to choose backend. GPU unloads after {gpu_idle_minutes()} min idle "
+            "(set ~/.config/voice-type/gpu-idle-minutes to 1–60).")
+    if backend == "gpu" and not gpu_available():
+        label += " ?"
+        hint += " GPU installation missing; transcription will use NPU."
+    return {"text": label, "tooltip": hint, "class": backend}
+
+
+def pick_backend():
+    options = "Auto (GPU on AC · NPU on battery)\nNPU always\nGPU always\n"
+    choice = subprocess.run(["wofi", "--dmenu", "--prompt", "Voice transcription", "--lines", "3"],
+                            input=options, text=True, capture_output=True, check=False).stdout.strip()
+    mode = {"Auto (GPU on AC · NPU on battery)": "auto", "NPU always": "npu", "GPU always": "gpu"}.get(choice)
+    if mode:
+        if mode == "gpu" and not gpu_available():
+            notify("GPU Whisper is unavailable; reinstall GPU model before selecting it")
+            return
+        MODE_FILE.write_text(mode + "\n")
+        notify(f"Voice backend: {mode.upper()}" if mode != "auto" else "Voice backend: Auto")
 
 
 def notify(message):
@@ -244,6 +335,19 @@ def cleanup_transcript(raw):
         return raw
 
 
+def transcribe_gpu(wav):
+    result = subprocess.run([
+        "curl", "--fail-with-body", "--silent", "--show-error", "--max-time", "600",
+        "-F", f"file=@{wav};type=audio/wav", "-F", "response_format=json",
+        GPU_URL + "/inference",
+    ], capture_output=True, text=True, timeout=605)
+    if result.returncode:
+        raise RuntimeError("GPU Whisper transcription failed; see " + str(ROOT / "gpu-server.log"))
+    text = json.loads(result.stdout)["text"]
+    os.utime(ROOT / "gpu-last-use", None)
+    return text.strip().replace("\n", " ").replace("\r", " ")
+
+
 def transcribe(wav):
     # curl only contacts the locally bound NPU server. Avoid shell interpolation.
     result = subprocess.run([
@@ -277,8 +381,22 @@ def start():
         process = subprocess.Popen([
             "pw-record", "--target", target, "--rate", "16000", "--channels", "1", "--format", "s16", str(wav),
         ], stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
-    (ROOT / "recording.json").write_text(json.dumps({"pid": process.pid, "wav": str(wav)}))
+    backend = chosen_backend()
+    (ROOT / "recording.json").write_text(json.dumps({"pid": process.pid, "wav": str(wav), "backend": backend}))
     set_status("recording", process.pid)
+    if backend == "gpu" and gpu_available():
+        # Load weights while the user speaks; on stop we can still fall back to NPU.
+        last_use = ROOT / "gpu-last-use"
+        last_use.touch(exist_ok=True)
+        os.utime(last_use, None)
+        if not gpu_ready():
+            try:
+                with open(ROOT / "gpu-worker.log", "ab") as log:
+                    subprocess.Popen([sys.executable, str(GPU_WORKER)], stdin=subprocess.DEVNULL,
+                                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+                                     env=dict(os.environ, VOICE_GPU_IDLE_MINUTES=str(gpu_idle_minutes())))
+            except OSError:
+                pass
     notify("Listening… press the same voice hotkey to stop")
 
 
@@ -304,10 +422,21 @@ def stop(state):
     if not has_speech(wav):
         notify("No speech detected")
         return
+    backend = state.get("backend", "npu")
     set_status("transcribing")
-    notify("Transcribing on NPU…")
-    ensure_server()
-    text = transcribe(wav)
+    notify(f"Transcribing on {backend.upper()}…")
+    if backend == "gpu":
+        try:
+            ensure_gpu()
+            text = transcribe_gpu(wav)
+        except (RuntimeError, OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
+            print(f"voice-type: GPU unavailable ({exc}), retrying on NPU", file=sys.stderr)
+            notify("GPU unavailable; retrying on NPU")
+            ensure_server()
+            text = transcribe(wav)
+    else:
+        ensure_server()
+        text = transcribe(wav)
     if not text:
         notify("No speech detected")
         return
@@ -326,11 +455,17 @@ def stop(state):
 
 
 def main():
+    if sys.argv[1:] == ["--backend-waybar"]:
+        print(json.dumps(backend_label()))
+        return
     if sys.argv[1:] == ["--waybar"]:
         show_status()
         return
     ROOT.mkdir(mode=0o700, parents=True, exist_ok=True)
     os.chmod(ROOT, 0o700)
+    if sys.argv[1:] == ["--pick-backend"]:
+        pick_backend()
+        return
     with open(ROOT / "toggle.lock", "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if sys.argv[1:]:
