@@ -38,6 +38,17 @@
   padding-right: 1em;
 }
 
+#custom-voice-type {
+  padding: 0 0.7em;
+  color: #fabd2f;
+}
+
+#custom-voice-type.recording { color: #f7768e; }
+#custom-voice-type.transcribing { color: #7aa2f7; }
+#custom-voice-type.polishing { color: #bb9af7; }
+#custom-voice-type.done { color: #9ece6a; }
+#custom-voice-type.error { color: #f7768e; }
+
 #custom-power-profile {
   padding-right: 0.7em;
   color: @foreground;

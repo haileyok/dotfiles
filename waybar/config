@@ -6,7 +6,7 @@
 
     "modules-left": ["memory", "temperature", "sway/workspaces"],
     "modules-center": ["clock"],
-    "modules-right": ["wireplumber", "battery", "backlight", "custom/power-profile", "tray"],
+    "modules-right": ["custom/voice-type", "wireplumber", "battery", "backlight", "custom/power-profile", "tray"],
 
     "sway/workspaces": {
         "format-icons": {
@@ -54,6 +54,15 @@
     "tray": {
         "icon-size": 20,
         "spacing": 16
+    },
+
+    "custom/voice-type": {
+        "exec": "python3 /home/hailey/dotfiles/bin/voice-type.py --waybar",
+        "return-type": "json",
+        "format": "{text}",
+        "interval": 1,
+        "hide-empty-text": true,
+        "tooltip": true
     },
 
     "custom/power-profile": {
