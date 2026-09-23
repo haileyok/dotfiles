@@ -77,6 +77,7 @@
         kitty
         roastPackage
         coder
+        v4l-utils
       ];
 
       # NOTE: sway, waybar, swayidle, swaylock, and swaynotificationcenter are

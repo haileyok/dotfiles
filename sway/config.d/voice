@@ -1,0 +1,3 @@
+# NPU dictation: V pre-transcribes in background, inserts once on stop; B transcribes after stopping. Never send Enter.
+bindsym --no-repeat $mod+Shift+v exec python3 /home/hailey/dotfiles/bin/voice-type.py --live
+bindsym --no-repeat $mod+Shift+b exec python3 /home/hailey/dotfiles/bin/voice-type.py --batch

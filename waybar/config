@@ -59,9 +59,12 @@
     "custom/power-profile": {
         "exec": "powerprofilesctl get 2>/dev/null | sed 's/performance/⚡/;s/balanced/⚖/;s/power-saver/🌙/'",
         "interval": 10,
-        "on-click": "power-profiles.sh power-saver",
-        "on-click-right": "power-profiles.sh performance",
-        "on-click-middle": "power-profiles.sh balanced",
+        // bin/ scripts are only on PATH via .zshrc, which waybar (launched by
+        // sway) never sources — use the absolute path. ~/ expands fine under
+        // waybar's /bin/sh -c invocation.
+        "on-click": "~/dotfiles/bin/power-profiles.sh power-saver",
+        "on-click-right": "~/dotfiles/bin/power-profiles.sh performance",
+        "on-click-middle": "~/dotfiles/bin/power-profiles.sh balanced",
         "tooltip": true,
         "tooltip-format": "Left: power-saver  Middle: balanced  Right: performance"
     }

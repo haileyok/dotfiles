@@ -54,6 +54,7 @@ link_file "$DOTFILES_DIR/zellij"         "$CONFIG_DIR/zellij"
 link_file "$DOTFILES_DIR/git"            "$CONFIG_DIR/git"
 link_file "$DOTFILES_DIR/gtk-3.0"        "$CONFIG_DIR/gtk-3.0"
 link_file "$DOTFILES_DIR/gtk-4.0"        "$CONFIG_DIR/gtk-4.0"
+link_file "$DOTFILES_DIR/wireplumber"    "$CONFIG_DIR/wireplumber"
 link_file "$DOTFILES_DIR/polytoken/skills" "$CONFIG_DIR/polytoken/skills"
 
 echo
@@ -201,8 +202,15 @@ fi
 # Patch chromium to launch via nixGL (GPU compositing needs system Mesa)
 CHROMIUM_DESKTOP="$APPS_DIR/chromium-browser.desktop"
 if [ -f "$CHROMIUM_DESKTOP" ]; then
-    sed -i 's|^Exec=chromium|Exec=nixGL chromium|g' "$CHROMIUM_DESKTOP"
-    echo "  ✓ chromium desktop patched (nixGL wrapper)"
+    # WebRTCPipeWireCapturer: route camera/mic through the xdg portal — without
+    # it, nix Chromium on Wayland can't see V4L2/PipeWire devices (Meet shows
+    # no mic/webcam). Same flag the Slack patch below uses. Idempotent: matches
+    # both fresh (Exec=chromium...) and previously-patched (Exec=nixGL chromium...)
+    # lines, and skips lines already carrying WebRTCPipeWireCapturer.
+    FLAGS='--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations,WebRTCPipeWireCapturer --enable-wayland-ime=true'
+    sed -i "/^Exec=/!b; /WebRTCPipeWireCapturer/b; s|^Exec=\(nixGL \)\?chromium\( --incognito\)\?\( %U\)\?|Exec=nixGL chromium ${FLAGS}\2\3|" "$CHROMIUM_DESKTOP"
+    sed -i 's|^TryExec=.*|TryExec=nixGL|' "$CHROMIUM_DESKTOP"
+    echo "  ✓ chromium desktop patched (nixGL wrapper + Wayland/PipeWire flags)"
 fi
 
 # Patch 1password to launch via nixGL (Electron GPU compositing needs system Mesa)

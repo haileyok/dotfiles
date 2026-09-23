@@ -1,2 +1,5 @@
 bindsym $mod+t exec thunar
 bindsym $mod+Shift+n exec swaync-client -t -sw
+
+# Power profile cycling: power-saver -> balanced -> performance (see bin/power-profiles.sh)
+bindsym $mod+p exec ~/dotfiles/bin/power-profiles.sh cycle

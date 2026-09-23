@@ -1,0 +1,6 @@
+# Generated Python cache from local scripts
+__pycache__/
+*.py[cod]
+
+# EasyEffects writes runtime lock files into its config directory
+easyeffects/db/
