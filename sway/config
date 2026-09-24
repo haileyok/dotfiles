@@ -13,8 +13,9 @@ set $highlight #b21858
 
 set $wallpaper /home/hailey/dotfiles/bg.jpg
 
-set $lock swaylock -f -i $wallpaper -s fill
-# set $lock swaylock --clock --indicator --effect-scale 1 --effect-vignette 0.5:0.5 --effect-blur 4x2 --datestr "" --timestr "%k:%M" -i $wallpaper -s fill
+# hyprlock (config: hypr/hyprlock.conf) — supports touch-to-unlock fingerprint.
+# It does not daemonize, so guard against double-locking with pidof.
+set $lock pidof hyprlock || hyprlock
 
 exec dbus-update-activation-environment --systemd --all
 exec /usr/libexec/xdg-desktop-portal --replace
@@ -85,7 +86,7 @@ assign [app_id="spotify"] 9
 #corner_radius 10
 
 bindsym $mod+L exec $lock
-bindsym --no-repeat $mod+Shift+l exec $lock && systemctl suspend
+bindsym --no-repeat $mod+Shift+l exec sh -c '(pidof hyprlock || hyprlock) & sleep 1; systemctl suspend'
 
 bindsym $mod+Left focus left
 bindsym $mod+Down focus down

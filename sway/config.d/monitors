@@ -2,6 +2,11 @@
 output eDP-1 resolution 2880x1920@120Hz pos 0,0 scale 1.25 adaptive_sync on
 output DP-3 resolution 3840x2160@239.987Hz pos 2880,0 adaptive_sync off
 
+# The eDP-1 line above always says 120Hz; the power profile you picked manually
+# decides the real rate (power-saver = 60Hz). Re-apply it after every reload so
+# a reload doesn't silently undo power-saver. Never changes the profile itself.
+exec_always ~/dotfiles/bin/power-profiles.sh sync
+
 # External monitors - uncomment and adjust when connected:
 #output DP-2 resolution 3840x2160@120Hz pos 0,0
 #output HDMI-A-1 resolution 2560x1440@143.912hz transform 270 pos -1440,0

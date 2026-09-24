@@ -34,7 +34,7 @@ alongside the built-in touchpad.
    `nix profile upgrade dotfiles` to pick up `flake.nix` changes. (We hit
    this exact error while adding `bibata-cursors` — `upgrade` is the fix.)
 
-2. **System package manager (zypper) — sway, waybar, swayidle, swaylock,
+2. **System package manager (zypper) — sway, waybar, swayidle, hyprlock,
    swaync are intentionally NOT in the nix flake.** Nix-built versions of
    these link against nix's Mesa, which lacks the `radeonsi_dri.so` AMD
    driver. Running the nix version crashes sway immediately after login
@@ -42,7 +42,7 @@ alongside the built-in touchpad.
    `~/.nix-profile/bin` is early in `PATH`, a nix-installed sway would
    silently shadow the working system one. **Never add these packages to
    `flake.nix`.** They're installed via `sudo zypper install sway gtkgreet
-   greetd waybar swayidle swaylock swaync` and updated via `zypper`, outside
+   greetd waybar swayidle hyprlock swaync` and updated via `zypper`, outside
    this repo's control.
 
 3. **`setup.sh`** — idempotent symlink + bootstrap script. Symlinks repo
@@ -68,7 +68,11 @@ sway/                 Sway compositor config (symlinked to ~/.config/sway)
   config.d/assignments Workspace app assignments
 waybar/                Status bar (style.css + config, JSON modules)
 swaync/                Notification center (swaync = sway-notification-center)
-swaylock/, swayidle/   Lockscreen + idle daemon config
+swayidle/              Idle daemon config (locks via hyprlock)
+hypr/                  hyprlock.conf — the screen locker ($lock in sway/config; also
+                       swayidle). zypper-installed, never nix. Does not daemonize:
+                       always launch as `pidof hyprlock || hyprlock`. Fingerprint
+                       touch-to-unlock via fprintd.
 greetd/                Display manager config (config.toml, environment) — installed to
                        /etc/greetd/config.toml manually, not symlinked by setup.sh
 ghostty/               Terminal emulator config
@@ -88,8 +92,13 @@ README.md              Human-facing install instructions (numbered steps)
 
 ## Constraints agents must respect
 
-- **Never add sway/waybar/swayidle/swaylock/swaync to `flake.nix`.** See tier
+- **Never add sway/waybar/swayidle/hyprlock/swaync to `flake.nix`.** See tier
   2 above — this breaks AMD GPU rendering and causes a login loop.
+- **Never `zypper remove swaylock`** (or other sway-pattern members) even though
+  hyprlock is the locker. The chain `sway-branding-openSUSE` → `patterns-sway-sway`
+  → `swaylock` means removal takes out `sway-run.sh` (gtkgreet's session
+  launcher) and `sway` itself, leaving greetd unable to log in. swaylock stays
+  installed but unused. Check `zypper info --requires` before removing anything.
 - **GPU/Electron apps need the nixGL wrapper.** Chromium, Slack, Discord,
   Spotify, 1Password, Signal, and ghostty are all patched in `setup.sh` to
   launch via `nixGL <binary>` because nix builds link against nix's Mesa,
@@ -120,6 +129,11 @@ README.md              Human-facing install instructions (numbered steps)
   (everything else, requires sudo + reboot, documented per-var in README)**.
   Follow this same dual pattern for any new session-wide env var (we used it
   for `XCURSOR_THEME`/`XCURSOR_SIZE` when fixing the cursor theme).
+  **Exception:** vars set in `/etc/sway/env` (owned by `sway-branding-openSUSE`,
+  sourced by `sway-run.sh` *after* `/etc/environment`) win over
+  `/etc/environment` — e.g. `SDL_VIDEODRIVER=wayland`, `QT_QPA_PLATFORM`,
+  `MOZ_ENABLE_WAYLAND`. Override those per-app with a `bin/` wrapper + patched
+  `.desktop` file (see `bin/steam`), not globally.
 - **SELinux is enforcing by default on openSUSE Tumbleweed.** The nix store
   gets labeled `default_t`, which lacks entrypoint permissions — this blocks
   nix-installed zsh as a login shell and blocks systemd from reading
@@ -191,7 +205,7 @@ README.md              Human-facing install instructions (numbered steps)
 
 ## Workflow: testing changes
 
-Most sway/waybar/swaync/swayidle/swaylock changes apply live without logout:
+Most sway/waybar/swaync/swayidle/hyprlock changes apply live without logout:
 
 ```bash
 swaymsg reload                 # sway/config + config.d/* changes

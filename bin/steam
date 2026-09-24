@@ -1,0 +1,12 @@
+#!/bin/sh
+# Steam wrapper — shadows /usr/bin/steam via ~/dotfiles/bin on PATH, and is
+# the Exec target of the patched steam.desktop (see setup.sh).
+#
+# openSUSE's sway session (sway-run.sh sources /etc/sway/env, owned by
+# sway-branding-openSUSE) exports SDL_VIDEODRIVER=wayland with no fallback.
+# The Steam client is a 32-bit X11 app that runs through Xwayland, so with
+# that value it can't open a window: the bootstrap drops to a console-only
+# update UI and no window ever appears. `wayland,x11` keeps native-Wayland
+# SDL apps on Wayland and lets Steam fall back to X11.
+export SDL_VIDEODRIVER=wayland,x11
+exec /usr/bin/steam "$@"

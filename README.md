@@ -86,7 +86,13 @@ sudo systemctl enable greetd
 > Mesa with working AMD drivers. Since hailey's PATH puts nix-profile/bin
 > first, nix sway would shadow the system sway and take precedence — so sway
 > is intentionally excluded from the nix flake. The same applies to waybar,
-> swayidle, swaylock, and swaynotificationcenter.
+> swayidle, hyprlock, and swaynotificationcenter.
+>
+> **Fingerprint unlock (Framework Goodix sensor):** `sudo zypper install
+> hyprlock fprintd fprintd-pam`, then `fprintd-enroll` (touch the sensor until
+> `enroll-completed`). hyprlock talks to fprintd directly, so the sensor is
+> live as soon as the screen locks — no Enter needed. Password unlock uses the
+> packaged `/usr/lib/pam.d/hyprlock` (`auth include login`); no PAM edits needed.
 >
 > **YubiKey OATH:** Current ykman versions use `ykman oath accounts list`; the
 > shell config keeps the older `ykman oath list` spelling working. The
@@ -226,7 +232,7 @@ private-repo clone plus per-user credentials — install it separately with
 | **CLI tools** | zsh, starship, fzf, eza, bat, gh, uv, go, yarn, yubikey-manager, tmux, zellij, neovim, wl-clipboard, brightnessctl, pokemon-colorscripts, ghostty, btop, kitty, coder |
 | **Roast (separate group)** | roast — built from the private `bluesky-social/roast` repo over SSH; included in `.#default` and `.#roastTools` only, never `.#minimal` |
 | **Desktop** | rofi, flameshot, easyeffects, networkmanagerapplet, blueman, thunar, xdg-desktop-portal-wlr |
-| **Desktop (system/zypper)** | sway, waybar, swayidle, swaylock, swaynotificationcenter — installed via zypper, not nix, to use system Mesa/GPU drivers |
+| **Desktop (system/zypper)** | sway, waybar, swayidle, hyprlock, swaynotificationcenter — installed via zypper, not nix, to use system Mesa/GPU drivers |
 | **System (zypper)** | pcsc-ccid (required for ykman OATH/PIV), tailscale — daemons need root + systemd (`sudo zypper install pcsc-ccid tailscale && sudo systemctl enable --now pcscd.socket tailscaled`) |
 | **System (zypper, laptops only)** | power-profiles-daemon — power profile switching (`sudo zypper install power-profiles-daemon && sudo systemctl enable --now power-profiles-daemon`). Framework laptops support this natively. Not needed on Framework Desktop. |
 | **Apps** | chromium, 1password-gui, slack, spotify, discord, signal-desktop, zoom-us |
@@ -266,7 +272,7 @@ nix profile install .#zshPlugins
 | `waybar/` | `~/.config/waybar` |
 | `swaync/` | `~/.config/swaync` |
 | `swayidle/` | `~/.config/swayidle` |
-| `swaylock/` | `~/.config/swaylock` |
+| `hypr/` | `~/.config/hypr` (hyprlock — the screen locker; fingerprint touch-to-unlock) |
 | `zellij/` | `~/.config/zellij` |
 | `polytoken/skills/` | `~/.config/polytoken/skills` |
 | `greetd/config.toml` | `/etc/greetd/config.toml` (manual sudo symlink) |
@@ -297,14 +303,9 @@ The following changes were made to the original dotfiles to support nix:
 ### `sway/config`
 - `xdg-desktop-portal` path changed from `/usr/lib/xdg-desktop-portal` to `/usr/libexec/xdg-desktop-portal` (openSUSE path)
 - `$term` changed to `nixGL ghostty` — bridges nix binary to system OpenGL/Mesa drivers
-- `$lock` simplified — removed unsupported `--effect-blur`, `--effect-vignette`, `--clock` flags (system swaylock 1.8.6 doesn't support them)
+- `$lock` switched from swaylock to hyprlock (`hypr/hyprlock.conf`) for fingerprint touch-to-unlock; swaylock removed
 - Added `exec swayidle -C ~/.config/swayidle/config` — was missing entirely
 - Commented out `workspace 9 output HDMI-A-1` — no external monitor connected
-
-### `swaylock/config`
-- Removed `screenshots=true` — not supported by upstream swaylock
-- Fixed `ring-color` line — had two color values (syntax error)
-- Commented out `indicator-x/y=50` — positioned indicator in top-left corner instead of center
 
 ### `swayidle/config`
 - Removed backslash-newline continuations — swayidle doesn't support them, caused parse errors

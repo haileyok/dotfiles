@@ -112,7 +112,7 @@
         roastPackage
       ];
 
-      # NOTE: sway, waybar, swayidle, swaylock, and swaynotificationcenter are
+      # NOTE: sway, waybar, swayidle, hyprlock, and swaynotificationcenter are
       # intentionally NOT installed via nix. The system (openSUSE RPM) versions
       # are already installed and work correctly with the AMD GPU (Mesa DRI
       # drivers). The nix versions link against nix Mesa, which lacks the

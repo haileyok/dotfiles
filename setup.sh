@@ -49,7 +49,7 @@ link_file "$DOTFILES_DIR/sway"           "$CONFIG_DIR/sway"
 link_file "$DOTFILES_DIR/waybar"         "$CONFIG_DIR/waybar"
 link_file "$DOTFILES_DIR/swaync"         "$CONFIG_DIR/swaync"
 link_file "$DOTFILES_DIR/swayidle"       "$CONFIG_DIR/swayidle"
-link_file "$DOTFILES_DIR/swaylock"       "$CONFIG_DIR/swaylock"
+link_file "$DOTFILES_DIR/hypr"           "$CONFIG_DIR/hypr"
 link_file "$DOTFILES_DIR/zellij"         "$CONFIG_DIR/zellij"
 link_file "$DOTFILES_DIR/git"            "$CONFIG_DIR/git"
 link_file "$DOTFILES_DIR/gtk-3.0"        "$CONFIG_DIR/gtk-3.0"
@@ -232,6 +232,16 @@ SPOTIFY_DESKTOP="$APPS_DIR/spotify.desktop"
 if [ -f "$SPOTIFY_DESKTOP" ]; then
     sed -i 's|^Exec=spotify|Exec=nixGL spotify|g' "$SPOTIFY_DESKTOP"
     echo "  ✓ spotify desktop patched (nixGL wrapper)"
+fi
+
+# Steam (zypper) — copy the system desktop file and point every Exec= at the
+# bin/steam wrapper, which sets SDL_VIDEODRIVER=wayland,x11. openSUSE's
+# /etc/sway/env forces SDL_VIDEODRIVER=wayland, and the 32-bit X11 Steam
+# client then never opens a window. See bin/steam.
+if [ -f /usr/share/applications/steam.desktop ]; then
+    cp /usr/share/applications/steam.desktop "$APPS_DIR/steam.desktop"
+    sed -i 's|^Exec=/usr/bin/steam|Exec='"$DOTFILES_DIR"'/bin/steam|' "$APPS_DIR/steam.desktop"
+    echo "  ✓ steam desktop patched (SDL_VIDEODRIVER wrapper)"
 fi
 
 # Patch signal to launch via nixGL (Electron GPU compositing needs system Mesa)
