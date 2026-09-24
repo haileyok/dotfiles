@@ -23,8 +23,10 @@ MODEL = Path.home() / ".config/flm/models/Whisper-V3-Turbo-NPU2/model.q4nx"
 EDITOR_MODEL = Path.home() / ".config/flm/models/Qwen3-4B-Instruct-2507-NPU2/model.q4nx"
 EDITOR_TAG = "qwen3-it:4b"
 EDITOR_URL = "http://127.0.0.1:52628"
-# Always use the laptop's built-in digital mic, never the current default source.
-MIC = "alsa_input.pci-0000_c1_00.6.HiFi__Mic1__source"
+# Use the laptop's HDA internal mic, not the default source (which may be a webcam).
+# The ACP/PDM Mic1 can return a constant -32768 after reboot; Mic2 is a separate
+# working HDA capture path. It needs the HiFi (Mic1, Mic2, Speaker) card profile.
+MIC = "alsa_input.pci-0000_c1_00.6.HiFi__Mic2__source"
 URL = "http://127.0.0.1:52625"
 GPU_URL = "http://127.0.0.1:52629"
 MODE_FILE = ROOT / "backend-mode"
@@ -200,16 +202,52 @@ def recorder_alive(pid, wav):
 
 
 def has_speech(wav):
-    """Reject truly silent captures, without assuming a particular microphone gain."""
+    """Reject broken and ambient-only recordings before Whisper can hallucinate."""
     with wave.open(str(wav), "rb") as stream:
         if stream.getnchannels() != 1 or stream.getsampwidth() != 2:
             raise RuntimeError("Unexpected recording format")
-        while chunk := stream.readframes(stream.getframerate()):
+        rate = stream.getframerate()
+        usable = False
+        active = 0
+        while chunk := stream.readframes(rate):
             samples = array("h")
             samples.frombytes(chunk)
-            if any(samples):
-                return True
-    return False
+            if not samples:
+                continue
+            # A broken ACP/PDM mic returns -32768 continuously. Mic2's
+            # clipped startup transient is trimmed before this check.
+            if sum(abs(sample) >= 32000 for sample in samples) * 10 >= len(samples) * 9:
+                continue
+            usable = True
+            for offset in range(0, len(samples), rate // 50):
+                frame = samples[offset:offset + rate // 50]
+                if frame and sum(sample * sample for sample in frame) > len(frame) * 350 * 350:
+                    active += 1
+        if not usable:
+            raise RuntimeError("Microphone signal is clipped or stuck; try the internal Mic2 audio profile")
+        return active >= 3
+
+
+def trim_mic_warmup(wav):
+    """Remove Mic2's clipped startup transient before sending audio to Whisper."""
+    with wave.open(str(wav), "rb") as stream:
+        rate = stream.getframerate()
+        if stream.getnchannels() != 1 or stream.getsampwidth() != 2 or rate != 16000:
+            raise RuntimeError("Unexpected recording format")
+        data = stream.readframes(stream.getnframes())
+    samples = array("h")
+    samples.frombytes(data)
+    # The measured HDA startup burst lasts ~0.8 s; avoid trimming later speech.
+    warmup = min(rate, len(samples))
+    if warmup and sum(abs(sample) >= 32000 for sample in samples[:warmup]) * 5 >= warmup:
+        samples = samples[warmup:]
+        if len(samples) < rate // 5:
+            raise RuntimeError("Recording was too short after microphone warm-up")
+        with wave.open(str(wav), "wb") as stream:
+            stream.setnchannels(1)
+            stream.setsampwidth(2)
+            stream.setframerate(rate)
+            stream.writeframes(samples.tobytes())
 
 
 def server_ready():
@@ -371,13 +409,17 @@ def mic_node_id():
         props = entry.get("info", {}).get("props", {})
         if entry.get("type") == "PipeWire:Interface:Node" and props.get("node.name") == MIC:
             return str(entry["id"])
-    raise RuntimeError("Built-in digital microphone unavailable")
+    raise RuntimeError("Built-in internal microphone (Mic2) unavailable; select the HiFi (Mic1, Mic2, Speaker) audio profile")
 
 
 def start():
     wav = ROOT / "recording.wav"
     wav.unlink(missing_ok=True)
     target = mic_node_id()
+    # ALSA can restore the HDA capture mux to Headset Mic across reboots.
+    # PipeWire's Mic2 node exists in that state but records no useful speech.
+    subprocess.run(["amixer", "-D", "hw:Generic_1", "sset", "Internal Mic", "cap"],
+                   stdout=subprocess.DEVNULL, check=True, timeout=4)
     with open(ROOT / "recorder.log", "ab", buffering=0) as log:
         process = subprocess.Popen([
             "pw-record", "--target", target, "--rate", "16000", "--channels", "1", "--format", "s16", str(wav),
@@ -420,6 +462,7 @@ def stop(state):
         raise RuntimeError("Recorder did not stop cleanly")
     if not wav.is_file() or wav.stat().st_size < 3200:
         raise RuntimeError("Recording was too short or empty")
+    trim_mic_warmup(wav)
     if not has_speech(wav):
         notify("No speech detected")
         return

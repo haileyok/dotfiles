@@ -57,7 +57,13 @@ def main():
         preferred = Path("/nix/store/1vkzwrp4ny20iljfnv9valq0bfn8czlv-mesa-26.2.3/share/vulkan/icd.d/radeon_icd.x86_64.json")
         if not preferred.is_file():
             raise RuntimeError("The verified RADV ICD is missing; GPU backend disabled")
-        env = dict(os.environ, VK_DRIVER_FILES=str(preferred), GGML_VK_VISIBLE_DEVICES="0")
+        # The locally installed whisper.cpp shared libraries live alongside
+        # whisper-server, outside the system loader path after a fresh login.
+        library_path = str(BINARY.parent)
+        if os.environ.get("LD_LIBRARY_PATH"):
+            library_path += os.pathsep + os.environ["LD_LIBRARY_PATH"]
+        env = dict(os.environ, VK_DRIVER_FILES=str(preferred), GGML_VK_VISIBLE_DEVICES="0",
+                   LD_LIBRARY_PATH=library_path)
         last_use = ROOT / "gpu-last-use"
         last_use.touch(exist_ok=True)
         os.utime(last_use, None)
