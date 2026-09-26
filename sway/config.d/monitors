@@ -6,6 +6,10 @@ output DP-3 resolution 3840x2160@239.987Hz pos 2880,0 adaptive_sync off
 # decides the real rate (power-saver = 60Hz). Re-apply it after every reload so
 # a reload doesn't silently undo power-saver. Never changes the profile itself.
 exec_always ~/dotfiles/bin/power-profiles.sh sync
+# Panel power savings (ABM) only applies on battery; this listens for charger
+# plug/unplug events and re-applies it. `exec` (not exec_always) + a lock keeps
+# a single instance across reloads.
+exec ~/dotfiles/bin/power-profiles.sh watch
 
 # External monitors - uncomment and adjust when connected:
 #output DP-2 resolution 3840x2160@120Hz pos 0,0

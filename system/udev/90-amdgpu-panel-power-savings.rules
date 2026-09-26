@@ -1,0 +1,10 @@
+# Let the `video` group write amdgpu's panel power savings (ABM) level on the
+# internal panel, so ~/dotfiles/bin/power-profiles.sh can set it per profile
+# without root. Values 0 (off) .. 4 (most aggressive backlight/contrast trade).
+#
+# Install:
+#   sudo install -m 644 ~/dotfiles/system/udev/90-amdgpu-panel-power-savings.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=drm
+ACTION=="add|change", SUBSYSTEM=="drm", KERNEL=="card*-eDP-*", TEST=="amdgpu/panel_power_savings", \
+  RUN+="/bin/chgrp video /sys%p/amdgpu/panel_power_savings", \
+  RUN+="/bin/chmod g+w /sys%p/amdgpu/panel_power_savings"

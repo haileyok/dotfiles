@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# battery-watts [seconds] — average battery discharge watts over N seconds (1 Hz samples)
+B=/sys/class/power_supply/BAT1
+n=${1:-30}
+for _ in $(seq "$n"); do
+  awk -v v="$(cat $B/voltage_now)" -v c="$(cat $B/current_now)" 'BEGIN{print v*c/1e12}'
+  sleep 1
+done | awk '{s+=$1; if(min==""||$1<min)min=$1; if($1>max)max=$1} END {printf "avg %.2f W (min %.2f max %.2f, n=%d)\n", s/NR, min, max, NR}'

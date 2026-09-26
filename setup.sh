@@ -55,6 +55,7 @@ link_file "$DOTFILES_DIR/git"            "$CONFIG_DIR/git"
 link_file "$DOTFILES_DIR/gtk-3.0"        "$CONFIG_DIR/gtk-3.0"
 link_file "$DOTFILES_DIR/gtk-4.0"        "$CONFIG_DIR/gtk-4.0"
 link_file "$DOTFILES_DIR/wireplumber"    "$CONFIG_DIR/wireplumber"
+link_file "$DOTFILES_DIR/gamemode/gamemode.ini" "$CONFIG_DIR/gamemode.ini"
 link_file "$DOTFILES_DIR/polytoken/skills" "$CONFIG_DIR/polytoken/skills"
 
 echo

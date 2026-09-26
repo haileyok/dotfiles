@@ -42,14 +42,41 @@ STAGES = {
 }
 
 
+# Waybar modules are signal-driven rather than polled (a 1 s poll spawned a
+# fresh python3 every second, ~9% of a core forever). Keep these in sync with
+# the "signal" keys in waybar/config.
+WAYBAR_STATUS_SIGNAL = 9
+WAYBAR_BACKEND_SIGNAL = 10
+STATUS_HOLD_SECONDS = 4
+
+
+def refresh_waybar(sig=WAYBAR_STATUS_SIGNAL, delay=0):
+    """Ask Waybar to re-run a module now, or after `delay` seconds (detached)."""
+    command = ["pkill", f"-RTMIN+{sig}", "-x", "waybar"]
+    try:
+        if delay:
+            subprocess.Popen(["sh", "-c", f'sleep {delay}; exec "$@"', "sh", *command],
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+        else:
+            subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=2, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 def set_status(stage, pid=None):
     """Persist only process/stage metadata for Waybar, never transcript or audio."""
     status = {"stage": stage, "pid": pid or os.getpid()}
     if stage in ("done", "error"):
-        status["expires"] = time.time() + 4
+        status["expires"] = time.time() + STATUS_HOLD_SECONDS
     temp = ROOT / f"status.{os.getpid()}.tmp"
     temp.write_text(json.dumps(status))
     os.replace(temp, STATUS)
+    refresh_waybar()
+    if stage in ("done", "error"):
+        # Re-run the module just after expiry so the badge disappears.
+        refresh_waybar(delay=STATUS_HOLD_SECONDS + 0.3)
 
 
 def show_status():
@@ -162,6 +189,7 @@ def pick_backend():
             notify("GPU Whisper is unavailable; reinstall GPU model before selecting it")
             return
         MODE_FILE.write_text(mode + "\n")
+        refresh_waybar(WAYBAR_BACKEND_SIGNAL)
         notify(f"Voice backend: {mode.upper()}" if mode != "auto" else "Voice backend: Auto")
 
 
@@ -545,6 +573,7 @@ def main():
                     status = None
                 if status not in ("done", "error"):
                     STATUS.unlink(missing_ok=True)
+                    refresh_waybar()
         else:
             start()
 

@@ -3,7 +3,9 @@ font-family = "FiraCode Nerd Font"
 # Explicit fallbacks keep CJK text and color emoji readable.
 font-family = "Source Han Sans SC"
 font-family = "Noto Color Emoji"
-cursor-style-blink = true
+# No blink: a blinking cursor forces continuous redraws (measurable idle
+# CPU/GPU cost, worse at 120 Hz), which hurts battery.
+cursor-style-blink = false
 cursor-click-to-move = true
 mouse-hide-while-typing = true
 background-opacity = 1

@@ -56,6 +56,9 @@
 #custom-voice-type.error { color: #f7768e; }
 
 #custom-power-profile {
-  padding-right: 0.7em;
+  padding: 0 0.7em;
   color: @foreground;
 }
+#custom-power-profile.performance { color: #f7768e; }
+#custom-power-profile.power-saver { color: #9ece6a; }
+#custom-power-profile.gamemode { color: #bb9af7; }

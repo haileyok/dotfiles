@@ -57,33 +57,44 @@
     },
 
     "custom/voice-backend": {
+        // Refreshed via SIGRTMIN+10 when the backend is picked; the slow poll
+        // only catches Auto flipping between AC and battery.
         "exec": "python3 /home/hailey/dotfiles/bin/voice-type.py --backend-waybar",
         "return-type": "json",
         "format": "{text}",
-        "interval": 5,
+        "interval": 30,
+        "signal": 10,
         "on-click": "python3 /home/hailey/dotfiles/bin/voice-type.py --pick-backend",
         "tooltip": true
     },
 
     "custom/voice-type": {
+        // voice-type.py sends SIGRTMIN+9 on every status change (and once more
+        // after done/error expires). The 30 s poll is only a safety net for a
+        // recorder that dies without updating status. Was interval 1, which
+        // spawned python3 every second (~9% of a core) even when idle.
         "exec": "python3 /home/hailey/dotfiles/bin/voice-type.py --waybar",
         "return-type": "json",
         "format": "{text}",
-        "interval": 1,
+        "interval": 30,
+        "signal": 9,
         "hide-empty-text": true,
         "tooltip": true
     },
 
     "custom/power-profile": {
-        "exec": "powerprofilesctl get 2>/dev/null | sed 's/performance/⚡/;s/balanced/⚖/;s/power-saver/🌙/'",
-        "interval": 10,
         // bin/ scripts are only on PATH via .zshrc, which waybar (launched by
         // sway) never sources — use the absolute path. ~/ expands fine under
         // waybar's /bin/sh -c invocation.
-        "on-click": "~/dotfiles/bin/power-profiles.sh power-saver",
-        "on-click-right": "~/dotfiles/bin/power-profiles.sh performance",
-        "on-click-middle": "~/dotfiles/bin/power-profiles.sh balanced",
-        "tooltip": true,
-        "tooltip-format": "Left: power-saver  Middle: balanced  Right: performance"
+        // Same shape as custom/voice-backend: JSON status + wofi picker.
+        // Every profile change made through power-profiles.sh / gamemode-hook.sh
+        // sends SIGRTMIN+8, so the poll only catches changes made elsewhere.
+        "exec": "~/dotfiles/bin/power-profiles.sh waybar",
+        "return-type": "json",
+        "format": "{text}",
+        "interval": 30,
+        "signal": 8,
+        "on-click": "~/dotfiles/bin/power-profiles.sh pick",
+        "tooltip": true
     }
 }

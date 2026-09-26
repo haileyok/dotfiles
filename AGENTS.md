@@ -81,6 +81,13 @@ nvim/                  Neovim config (kickstart.nvim-based)
 starship.toml          Shell prompt
 bin/                   Scripts on $PATH via .zshrc (e.g. power-profiles.sh for
                        Framework battery charge thresholds; used by waybar)
+gamemode/              gamemode.ini → ~/.config/gamemode.ini. Game mode on this
+                       APU = PPD *balanced* (not performance): CPU and iGPU share
+                       one power/thermal budget, and performance lets the cores
+                       throttle the iGPU. Hooks via bin/gamemode-hook.sh.
+                       Per game (Steam launch options): `gamemoderun %command%`.
+                       MangoHud was tried and removed: it dropped Slay the Spire 2
+                       to ~1 fps (Godot/Xwayland/Steam runtime), limiter or not.
 selinux/               Custom SELinux module (.te) for nix store execution
 flake.nix / flake.lock Nix package definitions (see tiers above)
 setup.sh               Symlink/bootstrap script
