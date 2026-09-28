@@ -44,6 +44,32 @@
         '';
       });
 
+      # btop with GPU panels for both AMD (ROCm) and NVIDIA machines.
+      # btop dlopen()s its GPU libraries at runtime. rocmSupport rpaths nix's
+      # rocm-smi. For NVIDIA the driver's libnvidia-ml must come from the host,
+      # but nix binaries don't search distro lib dirs, and cudaSupport only adds
+      # NixOS's /run/opengl-driver/lib. So we also rpath store dirs holding
+      # symlinks to each distro's libnvidia-ml; on machines without the NVIDIA
+      # driver the symlinks dangle and btop just skips NVIDIA.
+      nvmlHostLibDirs = map (dir:
+        pkgs.runCommand "nvml-host-link" { } ''
+          mkdir -p $out/lib
+          ln -s ${dir}/libnvidia-ml.so.1 $out/lib/libnvidia-ml.so.1
+          ln -s ${dir}/libnvidia-ml.so.1 $out/lib/libnvidia-ml.so
+        '') [
+          "/usr/lib/x86_64-linux-gnu" # Ubuntu/Debian
+          "/usr/lib64"                # openSUSE/Fedora
+        ];
+
+      gpuBtop = (pkgs.btop.override {
+        rocmSupport = true;
+        cudaSupport = true;
+      }).overrideAttrs (old: {
+        postPatchelf = (old.postPatchelf or "") + ''
+          patchelf --add-rpath ${pkgs.lib.concatMapStringsSep ":" (d: "${d}/lib") nvmlHostLibDirs} $out/bin/btop
+        '';
+      });
+
       # The public release no longer vendors dependencies (the old pin had a
       # committed vendor/ tree; the new one has an inconsistent one), so nix
       # fetches them via go mod download and we must track the vendor hash.
@@ -96,7 +122,7 @@
         brightnessctl
         pokemon-colorscripts
         ghostty
-        btop
+        gpuBtop # AMD + NVIDIA GPU panels, see definition above
         yubikey-manager
         kitty
         coder
