@@ -1,3 +1,5 @@
+# Add deno completions to search path
+if [[ ":$FPATH:" != *":/home/pelican/.zsh/completions:"* ]]; then export FPATH="/home/pelican/.zsh/completions:$FPATH"; fi
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 export PATH="$PATH:/usr/sbin:/sbin"
@@ -246,3 +248,7 @@ export PATH=$PATH:$ANDROID_HOME/tools
 # fi
 # unset __conda_setup
 # <<< conda initialize <<<
+. "/home/pelican/.deno/env"
+# Initialize zsh completions (added by deno install script)
+autoload -Uz compinit
+compinit

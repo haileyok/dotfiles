@@ -1,5 +1,25 @@
 {
   "nodes": {
+    "engram-garden": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791423855,
+        "narHash": "sha256-Wy9rAWZkyPugjZKyKOgBamzWOZtFdRGI+Uj9fQ9NXhs=",
+        "owner": "haileyok",
+        "repo": "engram-garden",
+        "rev": "678269f03560e10a01e03b552f41af74a1f120b5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "haileyok",
+        "repo": "engram-garden",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1790046670,
@@ -35,6 +55,7 @@
     },
     "root": {
       "inputs": {
+        "engram-garden": "engram-garden",
         "nixpkgs": "nixpkgs",
         "roast": "roast"
       }

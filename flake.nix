@@ -10,6 +10,13 @@
       url = "git+ssh://git@github.com/bluesky-social/roast.git?rev=fe38df0b9cf13ae70f767b10f27ab5705c8d55cf";
       flake = false;
     };
+    # Engram agent tools: engram (CLI), engram-mcp, engram-config. Public,
+    # so it is safe for `.#minimal`. Update with
+    # `nix flake lock --update-input engram-garden`.
+    engram-garden = {
+      url = "github:haileyok/engram-garden";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # NOTE: `outputs` must use `...@inputs` and reference `roast` lazily (via
@@ -128,6 +135,7 @@
         coder
         v4l-utils
         gcx
+        inputs.engram-garden.packages.${system}.engram
       ];
 
       # Roast is deliberately NOT in cliTools: it requires cloning a private
