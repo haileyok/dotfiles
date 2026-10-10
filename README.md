@@ -202,6 +202,30 @@ Pair the AirPods normally (blueman applet or `bluetoothctl`). AirPods features
 are per-pairing — after changing DeviceID, remove and re-pair the buds for the
 Apple-side handshake to complete.
 
+**Hi-res mic + handoff (fork builds).** `magicpodscore` and `magicpods` are
+built from the forks (`haileyok/MagicPodsCore` branch `hailey/handoff`,
+`haileyok/MagicPodsLinux` branch `hailey/mac-parity`) via `flake.nix` — they
+carry the Mac-parity ports: hi-res mic (Apple's AAC-ELD 64 kHz voice codec over
+AACP, not BlueZ's 8 kHz HFP) and Smart Routing handoff. With MagicPods running,
+the mic appears as the **`AirPodsHiRes`** PulseAudio source — select it in
+Meet/browser mic settings. A2DP playback stays at full quality while the mic
+is active (this is the macOS behavior). The backend's "HiResMic" toggle in the
+MagicPods UI must be enabled (it is by default on this branch).
+
+Two `wireplumber/` configs make that work and deploy via `setup.sh`:
+`52-bluez-hfp-cvsd.conf` (only offer the legacy CVSD codec on HFP — BlueZ
+msbc crashes these buds) and `53-no-autoswitch-hfp.conf`
+(`wireplumber.settings bluetooth.autoswitch-to-headset-profile = false` —
+stops WirePlumber from dropping the buds to 8 kHz HFP when an app opens the
+mic; without it, opening the mic in Meet degrades *all* audio).
+
+Gotcha learned the hard way: heavy PipeWire churn (module load/unload across
+backend restarts) can poison the `pipewire-pulse` compat layer's routing —
+captures silently land on the wrong source. Fix is a full stack reset:
+`systemctl --user restart pipewire pipewire-pulse wireplumber` — and restart
+any apps that were playing audio when you did (Chromium apps don't
+reconnect their audio socket on their own).
+
 ## Minimal setup (user-only machines, no root)
 
 For machines where you only have a user account (no sudo), use the minimal
