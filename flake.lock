@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791593034,
-        "narHash": "sha256-yUzjNGoYc0hIvfya+gKEg2GkMxy7ZoiT6Ra6W4Fvw24=",
+        "lastModified": 1791609788,
+        "narHash": "sha256-xUGpxtSMACKzXbeMcDt0H8HOOhffpnmlznFphW0PwNA=",
         "owner": "haileyok",
         "repo": "engram-garden",
-        "rev": "e8954f4d83652c13d32ece0a908fb27d4b22aeac",
+        "rev": "e6b6e8cc3b0443922b981163eb9bc4fd7f7aa91d",
         "type": "github"
       },
       "original": {
@@ -40,11 +40,11 @@
     "magicpods-fork-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1791665777,
-        "narHash": "sha256-HXEBu1+umadRci9xZdDJDJhdWrIh0aH4ti9ZkQPTfAY=",
+        "lastModified": 1791669959,
+        "narHash": "sha256-Gya7BuEKuC8Q+E5PW+cSkQ1ZT5TIAt4qZAHLN0mKZYs=",
         "owner": "haileyok",
         "repo": "MagicPodsCore",
-        "rev": "29bd9fa560b7feafcf649219e585cf499f7775d3",
+        "rev": "ba64a22182e3a53f091e6a402280635247eeda82",
         "type": "github"
       },
       "original": {
@@ -56,11 +56,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1791456040,
-        "narHash": "sha256-H83yz/do+hjOO0uujHyH8RgtIQP2v7Mw+cLwcZK/xKc=",
+        "lastModified": 1791594108,
+        "narHash": "sha256-XK4KceonkwD8LuMAt/vNrz982mXJM5jeHAxMwsUXXAQ=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "e7439b6b14ad3cc35d05608ebca9bce01a25f5f8",
+        "rev": "6510408d147d8c5e6d76043e899e9251756f6a75",
         "type": "github"
       },
       "original": {
