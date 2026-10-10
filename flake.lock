@@ -40,11 +40,11 @@
     "magicpods-fork-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1791673059,
-        "narHash": "sha256-hJZ5RnKX5QCGYCpYSOD7zWtRm1tVy73egQaoyE5gffI=",
+        "lastModified": 1791673674,
+        "narHash": "sha256-UqoFY4O37z3xOYoYZYQGCTLV7zToqYxLwvQk9y9yw0g=",
         "owner": "haileyok",
         "repo": "MagicPodsCore",
-        "rev": "49151b668d8e86ad14e26254881ea2ca2bc721fd",
+        "rev": "33767ac49ef03d8e4e14345d0d3eacb308ee5c63",
         "type": "github"
       },
       "original": {
