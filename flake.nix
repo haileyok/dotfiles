@@ -17,6 +17,27 @@
       url = "github:haileyok/engram-garden";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # MagicPods fork (hailey/mac-parity): upstream + AirPods Mac-parity ports
+    # (hi-res mic AAC-ELD over AACP 0x58, Smart Routing handoff, QML controls;
+    # goal-001). Local path input — a git repo, so it locks to the current
+    # rev; `nix flake lock --update-input magicpods-fork` after forking work.
+    # NOTE: deliberately NOT safe for `.#minimal` on other machines — the
+    # fork lives on this machine only. Referenced lazily (inputs.*) in the
+    # same style as roast so `.#minimal` installs on keyless machines don't
+    # need this path to exist.
+    magicpods-fork = {
+      url = "git+file:///home/hailey/personal/magicpods-fork";
+      flake = false;
+    };
+    # MagicPodsCore is a git SUBMODULE of the fork — git flake inputs don't
+    # materialize submodules, so the core (which carries the Mac-parity
+    # ports: hi-res mic + handoff) is its own input, pointing at the
+    # submodule's repo (branch hailey/handoff, commits 440a1d6 + 29bd9fa
+    # on top of 2.0.10).
+    magicpods-fork-core = {
+      url = "git+file:///home/hailey/personal/magicpods-fork/src/modules/MagicPodsCore";
+      flake = false;
+    };
   };
 
   # NOTE: `outputs` must use `...@inputs` and reference `roast` lazily (via
@@ -99,6 +120,127 @@
         };
       };
 
+      # MagicPodsCore: the background daemon the MagicPods frontend (below)
+      # discovers on PATH and launches itself (BackendManager.cpp). Upstream
+      # "dependencies/" are FetchContent *stubs* that download sdbus-c++,
+      # nlohmann_json, toml++, uSockets, and uWebSockets at configure time —
+      # the nix sandbox blocks that, so each is fetched here and pointed at
+      # via FETCHCONTENT_SOURCE_DIR_<NAME>. The core has no install() rules,
+      # so the binary is installed manually.
+      #
+      # 2026-10-10: builds from the local fork (~/personal/magicpods-fork,
+      # branch hailey/mac-parity) instead of upstream — the fork carries the
+      # AirPods Mac-parity ports (goal-001): hi-res mic (AAC-ELD over AACP
+      # 0x58, core commit 440a1d6) and Smart Routing handoff (0x10, 29bd9fa),
+      # plus the 1024→4096 L2CAP recv-buffer fix (0x58 SDUs exceed 1 KB and
+      # SOCK_SEQPACKET silently truncates). ffmpeg (libavcodec/libavutil) is
+      # the AAC-ELD decoder. See 0d7x9n-wiry/goal-001-notes.md.
+      magicPodsCore = pkgs.stdenv.mkDerivation (finalAttrs: {
+        pname = "magicpodscore";
+        version = "2.0.10-mac-parity";
+        src = forkSource inputs.magicpods-fork-core;
+        sdbusCpp = pkgs.fetchFromGitHub { owner = "Kistler-Group"; repo = "sdbus-cpp"; tag = "v1.6.0"; hash = "sha256-h4eSVBm5VO5ol883dFKoilVGAcQVANNbFFVxKib2D48="; };
+        nlohmannJson = pkgs.fetchFromGitHub { owner = "nlohmann"; repo = "json"; tag = "v3.11.3"; hash = "sha256-7F0Jon+1oWL7uqet5i1IgHX0fUw/+z0QwEcA3zs5xHg="; };
+        tomlplusplus = pkgs.fetchFromGitHub { owner = "marzer"; repo = "tomlplusplus"; tag = "v3.4.0"; hash = "sha256-h5tbO0Rv2tZezY58yUbyRVpsfRjY3i+5TPkkxr6La8M="; };
+        uSockets = pkgs.fetchFromGitHub { owner = "uNetworking"; repo = "uSockets"; tag = "v0.8.7"; hash = "sha256-vf3xI5GOqTEZx8iXf133nQvhUylIRzJ3jGuNUcQk9nY="; };
+        uWebSockets = pkgs.fetchFromGitHub { owner = "uNetworking"; repo = "uWebSockets"; tag = "v20.58.0"; hash = "sha256-XSyX6iP+wlUcmBMdfvNyf/uFCzQGmogIS5ehUnRdWs0="; };
+        nativeBuildInputs = with pkgs; [ cmake ninja pkg-config ];
+        # sdbus-c++ resolves libsystemd through pkg-config (falls back to
+        # elogind/basu or a vendored build otherwise — keep those off).
+        # ffmpeg_8 = AAC-ELD decode for the hi-res mic (avcodec+avutil).
+        buildInputs = with pkgs; [ openssl libpulseaudio bluez zlib systemd ffmpeg_8 ];
+        cmakeFlags = [
+          "-DCMAKE_BUILD_TYPE=Release"
+          "-DBUILD_TESTS=OFF"
+          "-DBUILD_CODE_GEN=OFF"
+          "-DBUILD_EXAMPLES=OFF"
+          "-DBUILD_DOC=OFF"
+          "-DFETCHCONTENT_FULLY_DISCONNECTED=ON"
+          "-DFETCHCONTENT_SOURCE_DIR_SDBUS-CPP=${finalAttrs.sdbusCpp}"
+          "-DFETCHCONTENT_SOURCE_DIR_NLOHMANN_JSON=${finalAttrs.nlohmannJson}"
+          "-DFETCHCONTENT_SOURCE_DIR_TOMLPLUSPLUS=${finalAttrs.tomlplusplus}"
+          "-DFETCHCONTENT_SOURCE_DIR_USOCKETS_CONTENT=${finalAttrs.uSockets}"
+          "-DFETCHCONTENT_SOURCE_DIR_UWEBSOCKETS_CONTENT=${finalAttrs.uWebSockets}"
+        ];
+        installPhase = ''
+          runHook preInstall
+          install -Dm755 magicpodscore $out/bin/magicpodscore
+          runHook postInstall
+        '';
+        meta = {
+          description = "MagicPods background service (fork: AirPods hi-res mic + handoff)";
+          homepage = "https://github.com/steam3d/MagicPodsCore";
+          mainProgram = "magicpodscore";
+          license = pkgs.lib.licenses.gpl3Only;
+          platforms = [ "x86_64-linux" ];
+        };
+      });
+
+      # MagicPods frontend (Qt6/QML). Upstream's cmake install rules deploy a
+      # fully self-contained bundle (cqtdeployer-style), which is wrong under
+      # nix; like the AUR package, install just the binary, icon, and desktop
+      # file and let wrapQtAppsHook handle QML/plugin paths. The frontend
+      # finds the magicpodscore backend on PATH (see magicPodsCore above).
+      magicPods = pkgs.stdenv.mkDerivation (finalAttrs: {
+        pname = "magicpods";
+        version = "1.0.3-mac-parity";
+        # 2026-10-10: builds from the local fork (branch hailey/mac-parity)
+        # — carries the BatteryPage hi-res mic + handoff controls and the
+        # Backend::setCapabilityObject addition (see magicPodsCore above).
+        src = forkSource inputs.magicpods-fork;
+        nativeBuildInputs = with pkgs; [ cmake ninja qt6.wrapQtAppsHook ];
+        buildInputs = with pkgs; [
+          qt6.qtbase
+          qt6.qtdeclarative
+          qt6.qtwebsockets
+          qt6.qtsvg
+          qt6.qttools # lrelease for qt_add_translations
+        ];
+        # Skip the portable-bundle deploy script installed by
+        # qt_generate_deploy_qml_app_script — nix wrapping replaces it.
+        cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ];
+        installPhase = ''
+          runHook preInstall
+          install -Dm755 magicpods $out/bin/magicpods
+          install -Dm644 ${finalAttrs.src}/src/app/qml/assets/icons/mp-logo-color.svg \
+            $out/share/icons/hicolor/scalable/apps/magicpods.svg
+          mkdir -p $out/share/applications
+          cp ${finalAttrs.desktopItem}/share/applications/*.desktop \
+            $out/share/applications/
+          runHook postInstall
+        '';
+        desktopItem = pkgs.makeDesktopItem {
+          name = "app.magicpods";
+          desktopName = "MagicPods";
+          exec = "magicpods";
+          icon = "magicpods";
+          comment = "Control center for Bluetooth headphones (AirPods, Beats, Galaxy Buds)";
+          categories = [ "Utility" ];
+          startupWMClass = "MagicPods";
+        };
+        meta = {
+          description = "AirPods, Beats & Galaxy Buds integration for Linux";
+          homepage = "https://magicpods.app/linux/";
+          mainProgram = "magicpods";
+          license = pkgs.lib.licenses.gpl3Only;
+          platforms = [ "x86_64-linux" ];
+        };
+      });
+
+      # Local-fork source filter: cleanSource alone would copy the fork's
+      # build/ dirs (500 MB of artifacts) into the store — drop any path
+      # inside a "build" directory and .git dirs/files.
+      forkSource = root: pkgs.lib.cleanSourceWith {
+        src = root;
+        filter = path: _type:
+          let
+            base = baseNameOf path;
+            components = pkgs.lib.splitString "/" (toString path);
+            inBuild = builtins.elem "build" components;
+          in
+          !inBuild && base != ".git" && !pkgs.lib.hasSuffix ".git" base;
+      };
+
       # All packages needed for the dotfiles, grouped by category.
       # Install everything at once with:
       #   nix profile install .#default
@@ -177,7 +319,25 @@
         zoom-us
         qalculate-qt
         vlc
+        bolt-launcher
+        # AirPods/earbud control: MagicPods frontend + its magicpodscore
+        # backend. The frontend finds the backend on PATH (see the
+        # derivation notes above) — keep them in the same profile. Provides
+        # a tray icon (waybar "tray" module).
+        magicPods
+        magicPodsCore
+        # Reverse-engineering toolchain for the AirPods goal (goal-001):
+        # Ghidra 12.1.x is the native-binary analysis engine REA
+        # (github.com/morluto/rea, npm: rea-agents) expects via
+        # GHIDRA_INSTALL_DIR. Java GUI app, but launches headless fine.
+        ghidra
       ];
+
+      # (kept out of the apps list) — see apps group comment for purpose.
+      # REA also requires a full JDK 21+ (javac present, not just a JRE) with
+      # JAVA_HOME exported; .zshrc exports both JAVA_HOME and
+      # GHIDRA_INSTALL_DIR pointing into the nix profile.
+      reaJdk = [ pkgs.jdk ];
 
       fonts = with pkgs; [
         nerd-fonts.fira-code
@@ -224,7 +384,7 @@
       # Not included in buildEnv because it uses a different flake input.
 
       # Convenience: everything in one derivation
-      allPackages = cliTools ++ roastTools ++ desktopTools ++ apps ++ fonts ++ zshPlugins ++ localeData;
+      allPackages = cliTools ++ roastTools ++ desktopTools ++ apps ++ fonts ++ zshPlugins ++ localeData ++ reaJdk;
 
       # Minimal set for machines where you only have a user account (no sudo).
       # No desktop tools, no GUI apps, no Wayland-specific packages.
@@ -235,6 +395,8 @@
     {
       packages.${system} = {
         wtype-fast = fastWtype;
+        magicpods = magicPods;
+        magicpodscore = magicPodsCore;
         default = pkgs.buildEnv {
           name = "dotfiles-env";
           paths = allPackages;
