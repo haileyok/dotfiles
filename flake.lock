@@ -25,15 +25,16 @@
       "locked": {
         "lastModified": 1791666001,
         "narHash": "sha256-T+0/bhkrXzxnO+hJjy+S4tSBLblQezB3jGvFR0PUBYA=",
-        "ref": "refs/heads/hailey/mac-parity",
+        "owner": "haileyok",
+        "repo": "MagicPodsLinux",
         "rev": "9eb3bf198b4a821a16098587c3bba3857777aaba",
-        "revCount": 9,
-        "type": "git",
-        "url": "file:///home/hailey/personal/magicpods-fork"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///home/hailey/personal/magicpods-fork"
+        "owner": "haileyok",
+        "ref": "hailey/mac-parity",
+        "repo": "MagicPodsLinux",
+        "type": "github"
       }
     },
     "magicpods-fork-core": {
@@ -41,15 +42,16 @@
       "locked": {
         "lastModified": 1791665777,
         "narHash": "sha256-HXEBu1+umadRci9xZdDJDJhdWrIh0aH4ti9ZkQPTfAY=",
-        "ref": "refs/heads/hailey/handoff",
+        "owner": "haileyok",
+        "repo": "MagicPodsCore",
         "rev": "29bd9fa560b7feafcf649219e585cf499f7775d3",
-        "revCount": 269,
-        "type": "git",
-        "url": "file:///home/hailey/personal/magicpods-fork/src/modules/MagicPodsCore"
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///home/hailey/personal/magicpods-fork/src/modules/MagicPodsCore"
+        "owner": "haileyok",
+        "ref": "hailey/handoff",
+        "repo": "MagicPodsCore",
+        "type": "github"
       }
     },
     "nixpkgs": {

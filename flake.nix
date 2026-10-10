@@ -17,25 +17,21 @@
       url = "github:haileyok/engram-garden";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # MagicPods fork (hailey/mac-parity): upstream + AirPods Mac-parity ports
-    # (hi-res mic AAC-ELD over AACP 0x58, Smart Routing handoff, QML controls;
-    # goal-001). Local path input — a git repo, so it locks to the current
-    # rev; `nix flake lock --update-input magicpods-fork` after forking work.
-    # NOTE: deliberately NOT safe for `.#minimal` on other machines — the
-    # fork lives on this machine only. Referenced lazily (inputs.*) in the
-    # same style as roast so `.#minimal` installs on keyless machines don't
-    # need this path to exist.
+    # MagicPods fork (haileyok forks, branch hailey/mac-parity): upstream +
+    # AirPods Mac-parity ports (hi-res mic AAC-ELD over AACP 0x58, Smart
+    # Routing handoff, QML controls; goal-001). After forking work: push the
+    # branches, then `nix flake lock --update-input magicpods-fork
+    # --update-input magicpods-fork-core && nix profile upgrade dotfiles`.
     magicpods-fork = {
-      url = "git+file:///home/hailey/personal/magicpods-fork";
+      url = "github:haileyok/MagicPodsLinux/hailey/mac-parity";
       flake = false;
     };
     # MagicPodsCore is a git SUBMODULE of the fork — git flake inputs don't
     # materialize submodules, so the core (which carries the Mac-parity
-    # ports: hi-res mic + handoff) is its own input, pointing at the
-    # submodule's repo (branch hailey/handoff, commits 440a1d6 + 29bd9fa
-    # on top of 2.0.10).
+    # ports: hi-res mic + handoff) is its own input pointing at the core
+    # fork (branch hailey/handoff: commits 440a1d6 + 29bd9fa on 2.0.10).
     magicpods-fork-core = {
-      url = "git+file:///home/hailey/personal/magicpods-fork/src/modules/MagicPodsCore";
+      url = "github:haileyok/MagicPodsCore/hailey/handoff";
       flake = false;
     };
   };
