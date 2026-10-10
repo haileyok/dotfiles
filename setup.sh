@@ -182,6 +182,24 @@ for f in "$HOME"/.nix-profile/share/applications/*.desktop; do
     fi
 done
 
+# Patch Bolt to launch via nixGL so RuneLite can use the host OpenGL/GLX drivers.
+BOLT_DESKTOP="$APPS_DIR/Bolt.desktop"
+if [ -f "$BOLT_DESKTOP" ]; then
+    sed -i 's|^Exec=bolt-launcher|Exec=nixGL bolt-launcher|' "$BOLT_DESKTOP"
+    sed -i 's|^TryExec=.*|TryExec=nixGL|' "$BOLT_DESKTOP"
+    echo "  ✓ Bolt desktop patched (nixGL wrapper)"
+fi
+
+# Patch MagicPods (AirPods/Beats/Galaxy Buds control) to launch via nixGL (Qt
+# Quick GPU rendering needs system Mesa). The frontend finds the
+# magicpodscore backend on PATH, so no extra args are needed.
+MAGICPODS_DESKTOP="$APPS_DIR/app.magicpods.desktop"
+if [ -f "$MAGICPODS_DESKTOP" ]; then
+    sed -i 's|^Exec=magicpods|Exec=nixGL magicpods|' "$MAGICPODS_DESKTOP"
+    sed -i 's|^TryExec=.*|TryExec=nixGL|' "$MAGICPODS_DESKTOP"
+    echo "  ✓ magicpods desktop patched (nixGL wrapper)"
+fi
+
 # Patch ghostty to launch via nixGL (OpenGL bridge to system Mesa drivers)
 GHOSTTY_DESKTOP="$APPS_DIR/com.mitchellh.ghostty.desktop"
 if [ -f "$GHOSTTY_DESKTOP" ]; then

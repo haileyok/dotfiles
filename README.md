@@ -177,6 +177,31 @@ swaymsg -t getoutputs
 # Edit sway/config.d/monitors if needed
 ```
 
+### 9. AirPods / earbuds (optional)
+
+**MagicPods** — [steam3d/MagicPodsLinux](https://github.com/steam3d/MagicPodsLinux)
+frontend + its `magicpodscore` background service (custom builds in `flake.nix`,
+see the FetchContent notes there). It controls AirPods, Beats, and Galaxy Buds
+(noise modes, battery, ear detection popups) and puts a tray icon in waybar's
+`tray` module. The frontend finds the backend on `PATH`, so just launching
+`magicpods` is enough.
+
+For full AirPods features (the buds treating this machine as an Apple device:
+battery, ear detection, multipoint handoff), set the BlueZ DeviceID once.
+openSUSE ships no `/etc/bluetooth/main.conf` by default — create it:
+
+```bash
+sudo tee /etc/bluetooth/main.conf <<'EOF'
+[General]
+DeviceID = bluetooth:004C:0000:0000
+EOF
+sudo systemctl restart bluetooth
+```
+
+Pair the AirPods normally (blueman applet or `bluetoothctl`). AirPods features
+are per-pairing — after changing DeviceID, remove and re-pair the buds for the
+Apple-side handshake to complete.
+
 ## Minimal setup (user-only machines, no root)
 
 For machines where you only have a user account (no sudo), use the minimal
@@ -236,6 +261,7 @@ private-repo clone plus per-user credentials — install it separately with
 | **System (zypper)** | pcsc-ccid (required for ykman OATH/PIV), tailscale — daemons need root + systemd (`sudo zypper install pcsc-ccid tailscale && sudo systemctl enable --now pcscd.socket tailscaled`) |
 | **System (zypper, laptops only)** | power-profiles-daemon — power profile switching (`sudo zypper install power-profiles-daemon && sudo systemctl enable --now power-profiles-daemon`). Framework laptops support this natively. Not needed on Framework Desktop. |
 | **Apps** | chromium, 1password-gui, slack, spotify, discord, signal-desktop, zoom-us |
+| **AirPods / earbuds** | magicpods + magicpodscore (custom builds) — see "AirPods / earbuds" section below |
 | **Fonts** | FiraCode Nerd Font, JetBrains Mono Nerd Font, Iosevka Nerd Font, Ubuntu, Source Han Sans CJK, Noto Color Emoji |
 | **Zsh plugins** | zsh-autosuggestions, zsh-syntax-highlighting, zsh-autocomplete |
 | **Locale data** | glibcLocales (fixes locale warnings from nix binaries) |

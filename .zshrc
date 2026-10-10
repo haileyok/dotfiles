@@ -16,6 +16,17 @@ export PATH="$HOME/.local/bin:$PATH"
 # Fix locale warnings from nix binaries (nix glibc lacks locale data)
 export LOCALE_ARCHIVE=~/.nix-profile/lib/locale/locale-archive
 
+# REA (github.com/morluto/rea, npm: rea-agents) reverse-engineering
+# toolchain: needs a full JDK (JAVA_HOME) and Ghidra 12.1.x via
+# GHIDRA_INSTALL_DIR. Both installed via the nix profile. Paths resolve
+# through the profile symlink so they survive profile upgrades.
+if [ -d ~/.nix-profile/lib/ghidra ]; then
+    export GHIDRA_INSTALL_DIR=~/.nix-profile/lib/ghidra
+fi
+if [ -x ~/.nix-profile/bin/javac ]; then
+    export JAVA_HOME=$(readlink -f ~/.nix-profile/bin/javac | sed 's|/bin/javac.*||')
+fi
+
 # Do not run terminfo/plugins/zellij setup for non-interactive SSH commands.
 # scp and sftp require a completely byte-clean remote session.
 if [[ ! -o interactive ]]; then

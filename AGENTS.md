@@ -191,6 +191,14 @@ README.md              Human-facing install instructions (numbered steps)
   for a different machine, check `config.d/monitors` and run
   `swaymsg -t get_outputs` / `swaymsg -t get_inputs` first rather than
   guessing device names.
+- **AirPods app pair: `magicpods` (frontend) + `magicpodscore` (backend).**
+  `magicpods` finds the `magicpodscore` backend on `PATH` (both in the same
+  profile via the `apps` group — keep them together). MagicPodsCore's upstream
+  "dependencies/" are FetchContent download stubs; the nix build pre-fetches
+  them (see `flake.nix`) — when bumping the MagicPodsLinux rev, re-check
+  `dependencies/*/CMakeLists.txt` for version changes and update the pinned
+  sources + hashes. (librepods was evaluated and dropped 2026-10-10: the
+  nixpkgs package is the abandoned Qt branch, feature-poor vs. MagicPods.)
 
 ## Conventions
 
