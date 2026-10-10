@@ -136,6 +136,7 @@
         v4l-utils
         gcx
         inputs.engram-garden.packages.${system}.engram
+        atproto-goat
       ];
 
       # Roast is deliberately NOT in cliTools: it requires cloning a private
