@@ -23,11 +23,11 @@
     "magicpods-fork": {
       "flake": false,
       "locked": {
-        "lastModified": 1791666001,
-        "narHash": "sha256-T+0/bhkrXzxnO+hJjy+S4tSBLblQezB3jGvFR0PUBYA=",
+        "lastModified": 1791670521,
+        "narHash": "sha256-cmmJdk2S9NY9ed0P0NJPoE9wKorTZTNDUv+XxLpwC/E=",
         "owner": "haileyok",
         "repo": "MagicPodsLinux",
-        "rev": "9eb3bf198b4a821a16098587c3bba3857777aaba",
+        "rev": "4f18539daf06bff5b6ad4683f10cb8211f81b84e",
         "type": "github"
       },
       "original": {
