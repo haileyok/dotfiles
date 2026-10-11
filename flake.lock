@@ -23,11 +23,11 @@
     "magicpods-fork": {
       "flake": false,
       "locked": {
-        "lastModified": 1791676214,
-        "narHash": "sha256-tMNVc8UOD4X8r4hRkG1vI2/bhT0OtDUyEt8sVB1EPME=",
+        "lastModified": 1791681015,
+        "narHash": "sha256-cmmJdk2S9NY9ed0P0NJPoE9wKorTZTNDUv+XxLpwC/E=",
         "owner": "haileyok",
         "repo": "MagicPodsLinux",
-        "rev": "f978d324750928bea980776b8b3fc654c06b03bb",
+        "rev": "4763c74188a1be7360204afb684fc8898edfe08d",
         "type": "github"
       },
       "original": {
@@ -40,11 +40,11 @@
     "magicpods-fork-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1791678852,
-        "narHash": "sha256-rZjoEPhj+3t47pFl9pO9bbzSCcGDJHEzyTZJ4F11vBU=",
+        "lastModified": 1791681009,
+        "narHash": "sha256-UqoFY4O37z3xOYoYZYQGCTLV7zToqYxLwvQk9y9yw0g=",
         "owner": "haileyok",
         "repo": "MagicPodsCore",
-        "rev": "2a0763ecbb0a8e1910987e6ece56ce4860e1b7d4",
+        "rev": "09a9b1f663375ec8d1c5123ad8e0f87fc73dd2bf",
         "type": "github"
       },
       "original": {
