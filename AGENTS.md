@@ -80,7 +80,10 @@ zellij/, .tmux.conf    Terminal multiplexers
 nvim/                  Neovim config (kickstart.nvim-based)
 starship.toml          Shell prompt
 bin/                   Scripts on $PATH via .zshrc (e.g. power-profiles.sh for
-                       Framework battery charge thresholds; used by waybar)
+                       Framework battery charge thresholds; used by waybar).
+                       nixgl-vulkan: `nixGL nixgl-vulkan <cmd>` points a nix
+                       program's Vulkan loader at nixGL's Mesa RADV driver
+                       (Chromium WebGPU; see constraints below).
 gamemode/              gamemode.ini → ~/.config/gamemode.ini. Game mode on this
                        APU = PPD *balanced* (not performance): CPU and iGPU share
                        one power/thermal budget, and performance lets the cores
@@ -112,6 +115,28 @@ README.md              Human-facing install instructions (numbered steps)
   not the system driver. If you add a new nix-installed GUI app, follow the
   same pattern (see the "Patch desktop files for nix compatibility" section
   of `setup.sh`) rather than assuming it'll just work.
+- **Chromium WebGPU needs two things, and deliberately not the obvious flags.**
+  (1) `nixGL bin/nixgl-vulkan chromium ...` in the patched `.desktop` file: nix
+  Chromium can't load the system's `/usr/lib64/libvulkan_radeon.so` (system
+  glibc/LLVM), so without it `navigator.gpu.requestAdapter()` is `null` ("Found no
+  drivers" in the GPU log). `bin/nixgl-vulkan` derives the RADV ICD from the Mesa
+  nixGL itself uses (via the `LIBGL_DRIVERS_PATH` nixGL exports), no store path
+  hard-coded. It must be nixGL's Mesa: a RADV from the flake's newer nixpkgs Mesa
+  (26.x tested) fails to load next to nixGL's Mesa 25.0.x libs. (2)
+  `--enable-features=ForceEnableWebGpuInterop`: Chromium's "WebGPU on Vulkan via GL
+  interop" path, which a driver bug-list entry switches off for this GPU. It gives
+  Dawn a Vulkan device while Skia stays on GL. **Do not "simplify" this to
+  `--enable-features=Vulkan`**: that moves all of Skia onto Vulkan
+  (`Skia Backend: GaneshVulkan`), which Chromium documents as incompatible with
+  `--ozone-platform=wayland` and which has GPU-process crash reports. **Do not add
+  `--enable-unsafe-webgpu`** either: it lets a SwiftShader CPU adapter pass as
+  "WebGPU working" when the real driver fails to load. The GPU log line
+  `'--ozone-platform=wayland' is not compatible with Vulkan` is expected and
+  harmless with this setup. Verify at `chrome://gpu` (`WebGPU interop: Hardware
+  accelerated`, `Skia Backend: GaneshGL`) and with
+  `(await navigator.gpu.requestAdapter()).info` (`vendor: "amd"`, and
+  `isFallbackAdapter` false). Changes only take effect after fully quitting the
+  running Chromium: a second launch just opens a window in the old process.
 - **Locale:** nix's glibc ships without locale data. `LOCALE_ARCHIVE` must
   point at the nix-installed `glibcLocales` archive or nix binaries crash
   with locale warnings/errors. This is set in `.zshrc` (shell-launched

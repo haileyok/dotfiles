@@ -273,6 +273,7 @@
         coder
         v4l-utils
         gcx
+        awscli2
         inputs.engram-garden.packages.${system}.engram
         atproto-goat
       ];

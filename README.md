@@ -58,6 +58,21 @@ Re-run `./setup.sh` after `nix profile upgrade dotfiles` so the user-font links
 follow the current profile. Fully quit and restart Chromium after changing
 fonts; an existing browser process keeps its old font list.
 
+**WebGPU in Chromium.** `setup.sh` launches Chromium through
+`nixGL bin/nixgl-vulkan chromium ...` and adds `ForceEnableWebGpuInterop` to its
+feature flags. Nix binaries can't load the system's Vulkan driver, so
+`bin/nixgl-vulkan` points the Vulkan loader at the RADV driver from nixGL's own
+Mesa instead. The flag makes Chromium give WebGPU a Vulkan device while the rest
+of the browser keeps rendering through OpenGL. Fully quit Chromium and relaunch it
+from the desktop entry (a second launch only opens a window in the running process,
+which keeps the old flags), then check `chrome://gpu`: `WebGPU interop` should read
+"Hardware accelerated" and `Skia Backend` should still be `GaneshGL`. A quick test is
+`(await navigator.gpu.requestAdapter()).info.vendor` in the DevTools console, which
+should print `amd`. The driver is looked up through nixGL on every launch, so a
+nixGL update needs no re-run. If `requestAdapter()` returns `null`, check that
+`nixGL` is installed and that the browser was started from the entry `./setup.sh`
+patched (running Chromium by hand skips the wrapper and the flag).
+
 ### 3. Install display manager (requires sudo)
 
 The display manager (greetd) runs as root before login and needs a system-wide
@@ -188,15 +203,33 @@ see the FetchContent notes there). It controls AirPods, Beats, and Galaxy Buds
 
 For full AirPods features (the buds treating this machine as an Apple device:
 battery, ear detection, multipoint handoff), set the BlueZ DeviceID once.
-openSUSE ships no `/etc/bluetooth/main.conf` by default — create it:
+openSUSE ships no `/etc/bluetooth/main.conf` by default — create it with all
+three settings below:
 
 ```bash
 sudo tee /etc/bluetooth/main.conf <<'EOF'
 [General]
+# Apple DID spoof for AirPods / MagicPods. Inert for LE-only HID devices,
+# since DID is an SDP/BR-EDR concept.
 DeviceID = bluetooth:004C:0000:0000
+
+# Let a peer re-establish a Just Works bond without an agent confirming.
+# The default ("never") refuses that re-pair, which is what dropped the
+# MX Master 3S into a remove-and-re-pair loop — and Logitech firmware
+# increments the mouse's MAC octet on every pairing, so each cycle burned
+# a new address (19 of them between Sep 22 and Oct 18, 2026).
+JustWorksRepairing = always
+
+# Keep temporary device objects around instead of expiring them after 30s,
+# so bond state is not re-derived on every wake.
+TemporaryTimeout = 0
 EOF
 sudo systemctl restart bluetooth
 ```
+
+If a Logitech mouse ever does land on a new address again, don't re-pair:
+`bluetoothctl trust <MAC>` first, and prefer the mouse's Easy-Switch channel
+over removing and re-adding the device.
 
 Pair the AirPods normally (blueman applet or `bluetoothctl`). AirPods features
 are per-pairing — after changing DeviceID, remove and re-pair the buds for the

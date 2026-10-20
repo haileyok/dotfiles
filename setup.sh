@@ -223,13 +223,29 @@ CHROMIUM_DESKTOP="$APPS_DIR/chromium-browser.desktop"
 if [ -f "$CHROMIUM_DESKTOP" ]; then
     # WebRTCPipeWireCapturer: route camera/mic through the xdg portal — without
     # it, nix Chromium on Wayland can't see V4L2/PipeWire devices (Meet shows
-    # no mic/webcam). Same flag the Slack patch below uses. Idempotent: matches
-    # both fresh (Exec=chromium...) and previously-patched (Exec=nixGL chromium...)
-    # lines, and skips lines already carrying WebRTCPipeWireCapturer.
-    FLAGS='--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations,WebRTCPipeWireCapturer --enable-wayland-ime=true'
-    sed -i "/^Exec=/!b; /WebRTCPipeWireCapturer/b; s|^Exec=\(nixGL \)\?chromium\( --incognito\)\?\( %U\)\?|Exec=nixGL chromium ${FLAGS}\2\3|" "$CHROMIUM_DESKTOP"
+    # no mic/webcam). Same flag the Slack patch below uses.
+    #
+    # WebGPU: nix Chromium can't load the system's Vulkan driver, so
+    # navigator.gpu.requestAdapter() is null unless bin/nixgl-vulkan points the
+    # Vulkan loader at nixGL's Mesa RADV driver. ForceEnableWebGpuInterop then
+    # turns on Chromium's "WebGPU on Vulkan via GL interop" path, which a driver
+    # bug-list entry disables on this GPU. That path gives Dawn a Vulkan device
+    # while Skia/compositing stay on GL. Do NOT use --enable-features=Vulkan
+    # instead: it moves all of Skia onto Vulkan, which Chromium says is
+    # incompatible with --ozone-platform=wayland. And do NOT add
+    # --enable-unsafe-webgpu: it lets a CPU (SwiftShader) adapter masquerade as
+    # WebGPU when the real driver fails to load. The "'--ozone-platform=wayland'
+    # is not compatible with Vulkan" line in the GPU log is expected and harmless
+    # here. Verify at chrome://gpu: "WebGPU interop: Hardware accelerated" and
+    # "Skia Backend: GaneshGL".
+    #
+    # Idempotent: the .desktop files are re-copied pristine from the nix profile
+    # above, so the Exec= lines are always the stock `chromium [--incognito] [%U]`;
+    # lines already carrying nixgl-vulkan are skipped.
+    FLAGS='--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations,WebRTCPipeWireCapturer,ForceEnableWebGpuInterop --enable-wayland-ime=true'
+    sed -i "/^Exec=/!b; /nixgl-vulkan/b; s|^Exec=\(nixGL \)\?chromium\( --incognito\)\?\( %U\)\?|Exec=nixGL ${DOTFILES_DIR}/bin/nixgl-vulkan chromium ${FLAGS}\2\3|" "$CHROMIUM_DESKTOP"
     sed -i 's|^TryExec=.*|TryExec=nixGL|' "$CHROMIUM_DESKTOP"
-    echo "  ✓ chromium desktop patched (nixGL wrapper + Wayland/PipeWire flags)"
+    echo "  ✓ chromium desktop patched (nixGL wrapper + Vulkan/WebGPU + Wayland/PipeWire flags)"
 fi
 
 # Patch 1password to launch via nixGL (Electron GPU compositing needs system Mesa)

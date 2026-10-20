@@ -1,0 +1,33 @@
+#!/bin/sh
+# nixgl-vulkan - give a nix-built program a working Vulkan driver (AMD RADV).
+# Always run it under nixGL:
+#
+#     nixGL nixgl-vulkan <command> [args...]
+#
+# Why this exists: nix binaries cannot load the system's
+# /usr/lib64/libvulkan_radeon.so (it needs the system glibc/LLVM, which nix's
+# dynamic loader never searches). The Vulkan loader then logs "Failed loading
+# library ... Found no drivers" and, for example, Chromium's WebGPU
+# `navigator.gpu.requestAdapter()` resolves to null. nixGL's Mesa ships its own
+# RADV driver, but its /nix/store path changes whenever nixGL is updated, so it
+# is derived at launch time instead of hard-coded: nixGL exports
+# LIBGL_DRIVERS_PATH=<mesa>/lib/dri, and the ICD sits next to it in
+# <mesa>/share/vulkan/icd.d.
+#
+# It must be nixGL's Mesa, not one from this flake's nixpkgs: a newer Mesa's
+# libvulkan_radeon.so fails to load beside nixGL's Mesa libraries on
+# LD_LIBRARY_PATH (verified with Mesa 26.2.3 vs nixGL's 25.0.5).
+#
+# Only the radeon ICD is exposed (no llvmpipe), so if the driver ever fails to
+# load, apps see "no Vulkan device" instead of silently running on the CPU.
+# An already-set VK_DRIVER_FILES is left alone. Hardware assumption: AMD GPU.
+if [ -z "${VK_DRIVER_FILES:-}" ]; then
+    mesa_dri="${LIBGL_DRIVERS_PATH%%:*}"   # first entry is the x86_64 Mesa
+    icd="${mesa_dri%/lib/dri}/share/vulkan/icd.d/radeon_icd.x86_64.json"
+    if [ -n "$mesa_dri" ] && [ -r "$icd" ]; then
+        export VK_DRIVER_FILES="$icd"
+    else
+        echo "nixgl-vulkan: no nixGL Mesa RADV driver found (run it under nixGL); Vulkan left unconfigured" >&2
+    fi
+fi
+exec "$@"
