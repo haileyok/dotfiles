@@ -274,6 +274,10 @@
         v4l-utils
         gcx
         awscli2
+        # Datadog's observability CLI (DataDog/pup, Rust). nixpkgs' `pup` is a
+        # different tool (an HTML parser), so always use the `datadog-pup`
+        # attribute — it installs the `pup` binary.
+        datadog-pup
         inputs.engram-garden.packages.${system}.engram
         atproto-goat
       ];
