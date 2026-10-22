@@ -13,9 +13,13 @@
     # Engram agent tools: engram (CLI), engram-mcp, engram-config. Public,
     # so it is safe for `.#minimal`. Update with
     # `nix flake lock --update-input engram-garden`.
+    #
+    # No `nixpkgs.follows`: engram-garden pins nixos-unstable-small because
+    # cocoon's Spaces alpha needs Go >= 1.26.10, which nixos-unstable (this
+    # flake's input) does not carry yet. Following it would build engram
+    # with too old a Go.
     engram-garden = {
       url = "github:haileyok/engram-garden";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
     # MagicPods fork (haileyok forks, branch hailey/mac-parity): upstream +
     # AirPods Mac-parity ports (hi-res mic AAC-ELD over AACP 0x58, Smart

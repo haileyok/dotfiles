@@ -2,16 +2,14 @@
   "nodes": {
     "engram-garden": {
       "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
+        "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1792636330,
-        "narHash": "sha256-kPHHsVJpY34fpT0SJ4fUrk9d/rGp4Sr9zLZm4LqXCaU=",
+        "lastModified": 1792688439,
+        "narHash": "sha256-/4VvSvOakoT/xuTgh/gSDowDlWyFKbr7mg6DX78Kemg=",
         "owner": "haileyok",
         "repo": "engram-garden",
-        "rev": "5540eba03b77b309275a5745afcf315993297313",
+        "rev": "5baefea737cf5d5401c1732b984fabcc7537a6f9",
         "type": "github"
       },
       "original": {
@@ -56,6 +54,22 @@
     },
     "nixpkgs": {
       "locked": {
+        "lastModified": 1792617723,
+        "narHash": "sha256-IyFA94SfEEqeru/RZyRRbmk8gtBejDTiojSReKzUOc8=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "dce1caf58d1a943af38b376e824a0d036ec3eea7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable-small",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
         "lastModified": 1792502884,
         "narHash": "sha256-IoNisKcGbUjdd45qCqywGMCYmZ5EnkxezvLII0FWwNA=",
         "owner": "nixos",
@@ -92,7 +106,7 @@
         "engram-garden": "engram-garden",
         "magicpods-fork": "magicpods-fork",
         "magicpods-fork-core": "magicpods-fork-core",
-        "nixpkgs": "nixpkgs",
+        "nixpkgs": "nixpkgs_2",
         "roast": "roast"
       }
     }
