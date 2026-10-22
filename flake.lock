@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792575622,
-        "narHash": "sha256-JVVgvnLEg+BNU40Xs/tRxbjyiObkOujfwHzFwWgfz2U=",
+        "lastModified": 1792630627,
+        "narHash": "sha256-kGyc0R7dhttMc/s43K5V7yzGSSukacyWNBkHfqns5aU=",
         "owner": "haileyok",
         "repo": "engram-garden",
-        "rev": "db5d106568ee84b0be3e5d6dbf32ebc827501929",
+        "rev": "48f5e45dbae189172ddd8e53bbd33195df60359a",
         "type": "github"
       },
       "original": {
