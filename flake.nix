@@ -22,20 +22,24 @@
       url = "github:haileyok/engram-garden";
     };
     # MagicPods fork (haileyok forks, branch hailey/mac-parity): upstream +
-    # AirPods Mac-parity ports (hi-res mic AAC-ELD over AACP 0x58, Smart
-    # Routing handoff, QML controls; goal-001). After forking work: push the
-    # branches, then `nix flake lock --update-input magicpods-fork
-    # --update-input magicpods-fork-core && nix profile upgrade dotfiles`.
+    # AirPods fork (goal-001). Both inputs point at branch
+    # hailey/upstream-2.0.12: upstream 2.0.12 plus the fork's Smart Routing
+    # handoff + QML controls. 2026-11-14 rebased from the 2.0.10-based
+    # hailey/mac-parity + hailey/handoff branches — upstream shipped its own
+    # hi-res microphone and adapter detection, so the fork's duplicate
+    # implementations were dropped (see the magicPodsCore comment below).
+    # After fork work: push the branches, then `nix flake lock --update-input
+    # magicpods-fork --update-input magicpods-fork-core && nix profile upgrade
+    # dotfiles`.
     magicpods-fork = {
-      url = "github:haileyok/MagicPodsLinux/hailey/mac-parity";
+      url = "github:haileyok/MagicPodsLinux/hailey/upstream-2.0.12";
       flake = false;
     };
     # MagicPodsCore is a git SUBMODULE of the fork — git flake inputs don't
-    # materialize submodules, so the core (which carries the Mac-parity
-    # ports: hi-res mic + handoff) is its own input pointing at the core
-    # fork (branch hailey/handoff: commits 440a1d6 + 29bd9fa on 2.0.10).
+    # materialize submodules, so the core is its own input pointing at the
+    # core fork.
     magicpods-fork-core = {
-      url = "github:haileyok/MagicPodsCore/hailey/handoff";
+      url = "github:haileyok/MagicPodsCore/hailey/upstream-2.0.12";
       flake = false;
     };
   };
@@ -128,16 +132,20 @@
       # via FETCHCONTENT_SOURCE_DIR_<NAME>. The core has no install() rules,
       # so the binary is installed manually.
       #
-      # 2026-10-10: builds from the local fork (~/personal/magicpods-fork,
-      # branch hailey/mac-parity) instead of upstream — the fork carries the
-      # AirPods Mac-parity ports (goal-001): hi-res mic (AAC-ELD over AACP
-      # 0x58, core commit 440a1d6) and Smart Routing handoff (0x10, 29bd9fa),
-      # plus the 1024→4096 L2CAP recv-buffer fix (0x58 SDUs exceed 1 KB and
-      # SOCK_SEQPACKET silently truncates). ffmpeg (libavcodec/libavutil) is
-      # the AAC-ELD decoder. See 0d7x9n-wiry/goal-001-notes.md.
+      # 2026-11-14: builds from upstream 2.0.12 (the fork's
+      # hailey/upstream-2.0.12 branch) instead of the 2.0.10 base. That
+      # brings upstream's dynamic adapter detection (Issue #22 /
+      # DBusBtAdapter — no more hardcoded /org/bluez/hci0, which crashed the
+      # core on any boot where BlueZ exposed hci1 instead), its own hi-res
+      # microphone (AapHighResolutionMicrophoneCapability + AacEldDecoder +
+      # VirtualMicrophone, which replaced the fork's port), and the 4096-byte
+      # L2CAP recv buffer. The fork now adds only Smart Routing handoff
+      # (AACP 0x10) plus the 'active'/'level' fields the QML level meter
+      # reads. ffmpeg (libavcodec/libavutil) is the AAC-ELD decoder. See
+      # 0d7x9n-wiry/goal-001-notes.md.
       magicPodsCore = pkgs.stdenv.mkDerivation (finalAttrs: {
         pname = "magicpodscore";
-        version = "2.0.10-mac-parity";
+        version = "2.0.12-mac-parity";
         src = forkSource inputs.magicpods-fork-core;
         sdbusCpp = pkgs.fetchFromGitHub { owner = "Kistler-Group"; repo = "sdbus-cpp"; tag = "v1.6.0"; hash = "sha256-h4eSVBm5VO5ol883dFKoilVGAcQVANNbFFVxKib2D48="; };
         nlohmannJson = pkgs.fetchFromGitHub { owner = "nlohmann"; repo = "json"; tag = "v3.11.3"; hash = "sha256-7F0Jon+1oWL7uqet5i1IgHX0fUw/+z0QwEcA3zs5xHg="; };
@@ -184,9 +192,11 @@
       magicPods = pkgs.stdenv.mkDerivation (finalAttrs: {
         pname = "magicpods";
         version = "1.0.3-mac-parity";
-        # 2026-10-10: builds from the local fork (branch hailey/mac-parity)
-        # — carries the BatteryPage hi-res mic + handoff controls and the
-        # Backend::setCapabilityObject addition (see magicPodsCore above).
+        # 2026-11-14: builds from the fork (branch hailey/upstream-2.0.12)
+        # — upstream frontend + BatteryPage hi-res mic/handoff controls, the
+        # Backend::setCapabilityObject addition, and supportedApiVersion = 1
+        # (upstream's own frontend still expects 0 and rejects its core).
+        # See magicPodsCore above.
         src = forkSource inputs.magicpods-fork;
         nativeBuildInputs = with pkgs; [ cmake ninja qt6.wrapQtAppsHook ];
         buildInputs = with pkgs; [
@@ -302,13 +312,32 @@
       # renderer" immediately after login — resulting in a login loop.
       # Additionally, nix sway shadows the system sway on PATH, so the broken
       # nix version would take precedence.
+      # blueman-applet burned a whole core (12-75% CPU, 885 MB RSS after five
+      # hours) on a machine with a continuous BLE scan. RecentConns rebuilds its
+      # menu on every device-created signal and resolved each remembered device
+      # with Manager.find_device(), a linear scan over every bluez device object
+      # that read `device['Address']` -- and Base.get() issued a synchronous,
+      # uncached Properties.Get for that. With ~3,800 device objects in the tree
+      # (random LE advertisers accumulate while discovery never stops) each
+      # signal cost thousands of blocking system-bus round trips.
+      #
+      # The patch (pkgs/blueman-applet-hotloop.patch) makes Base.get() read the
+      # Gio.DBusProxy property cache instead of the bus (with a bypass for
+      # properties we just wrote and bluez has not echoed back), resolves
+      # find_device() via the deterministic /dev_XX_XX_.. object path, and
+      # coalesces RecentConns rebuilds onto one idle callback.
+      # Upstream-able; drop when blueman releases a fix.
+      bluemanPatched = pkgs.blueman.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ./pkgs/blueman-applet-hotloop.patch ];
+      });
+
       desktopTools = with pkgs; [
         fastWtype
         rofi
         flameshot
         easyeffects
         networkmanagerapplet
-        blueman
+        bluemanPatched
         thunar
         xdg-desktop-portal-wlr
         bibata-cursors

@@ -21,16 +21,16 @@
     "magicpods-fork": {
       "flake": false,
       "locked": {
-        "lastModified": 1791681015,
-        "narHash": "sha256-cmmJdk2S9NY9ed0P0NJPoE9wKorTZTNDUv+XxLpwC/E=",
+        "lastModified": 1794685075,
+        "narHash": "sha256-lqXrT+8PW5Bi2j9Xj9DCwF6xWTi1hbaijC8s71mUxtU=",
         "owner": "haileyok",
         "repo": "MagicPodsLinux",
-        "rev": "4763c74188a1be7360204afb684fc8898edfe08d",
+        "rev": "9c588793f6ae573d6f364ffaa2c607a26de2bdcf",
         "type": "github"
       },
       "original": {
         "owner": "haileyok",
-        "ref": "hailey/mac-parity",
+        "ref": "hailey/upstream-2.0.12",
         "repo": "MagicPodsLinux",
         "type": "github"
       }
@@ -38,16 +38,16 @@
     "magicpods-fork-core": {
       "flake": false,
       "locked": {
-        "lastModified": 1791681009,
-        "narHash": "sha256-UqoFY4O37z3xOYoYZYQGCTLV7zToqYxLwvQk9y9yw0g=",
+        "lastModified": 1794685052,
+        "narHash": "sha256-+U51KzrZQ+AQCUkBZqU87VtrunmExJ/1rsoUlTUd6JU=",
         "owner": "haileyok",
         "repo": "MagicPodsCore",
-        "rev": "09a9b1f663375ec8d1c5123ad8e0f87fc73dd2bf",
+        "rev": "711bef530cf9babb857ee529081750b4c8f871e1",
         "type": "github"
       },
       "original": {
         "owner": "haileyok",
-        "ref": "hailey/handoff",
+        "ref": "hailey/upstream-2.0.12",
         "repo": "MagicPodsCore",
         "type": "github"
       }
