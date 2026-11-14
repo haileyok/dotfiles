@@ -1,0 +1,19 @@
+# Keep the MediaTek MT7925 (Framework 16 Wi-Fi 7 card, USB 0e8d:0717) out of
+# USB runtime autosuspend.
+#
+# Its btusb interface is this machine's only Bluetooth controller, and letting
+# it autosuspend is a known crash trigger for MT79xx firmware. The 2026-10-20
+# incident started exactly there (control=auto, autosuspend_delay_ms=2000) and
+# ended with the controller dropping every link, then refusing to scan at all
+# until a reboot; nothing in the recovery ladder below a reboot helped.
+#
+# USB defaults power/control to "auto" and btusb allows autosuspend, so pin it
+# to "on" for this card.
+#
+# Install:
+#   sudo install -m 644 ~/dotfiles/system/udev/99-mt7925-bt-usb-autosuspend.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=usb
+#
+# Verify: cat /sys/bus/usb/devices/*/power/control  (the 0e8d:0717 card reads "on")
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="0e8d", ATTR{idProduct}=="0717", \
+  TEST=="power/control", ATTR{power/control}="on"
