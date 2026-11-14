@@ -1,0 +1,144 @@
+diff -urN a/blueman/bluez/Base.py b/blueman/bluez/Base.py
+--- a/blueman/bluez/Base.py	2026-11-09 14:55:20.295536578 -0800
++++ b/blueman/bluez/Base.py	2026-11-09 14:55:20.301564487 -0800
+@@ -1,4 +1,4 @@
+-from typing import List, Callable, Optional, Any, Union, Dict
++from typing import List, Callable, Optional, Any, Union, Dict, Set
+ 
+ from gi.repository import Gio, GLib, GObject
+ from gi.types import GObjectMeta
+@@ -60,12 +60,19 @@
+ 
+         self.__variant_map = {str: 's', int: 'u', bool: 'b'}
+ 
++        # Properties written through set() whose PropertiesChanged echo has not
++        # arrived yet; reads of these must not be answered from the cache.
++        self.__pending_set: Set[str] = set()
++
+     def _properties_changed(self, _proxy: Gio.DBusProxy, changed_properties: GLib.Variant,
+                             invalidated_properties: List[str]) -> None:
+         changed = changed_properties.unpack()
+         object_path = self.get_object_path()
+         logging.debug(f"{object_path} {changed} {invalidated_properties} {self}")
+ 
++        if self.__pending_set:
++            self.__pending_set.difference_update(set(changed) | set(invalidated_properties))
++
+         for key in list(changed) + invalidated_properties:
+             self.emit("property-changed", key, changed.get(key, None), object_path)
+ 
+@@ -96,6 +103,21 @@
+                           callback, reply_handler, error_handler)
+ 
+     def get(self, name: str) -> Any:
++        # Gio.DBusProxy already mirrors every property of this interface (it does
++        # an initial GetAll unless DO_NOT_LOAD_PROPERTIES is set, and keeps the
++        # mirror current from PropertiesChanged). Read from that cache instead of
++        # issuing a synchronous Properties.Get round trip per access: with a few
++        # thousand device objects in the bluez tree, an uncached read turns any
++        # `for d in manager.get_devices(): d['Address']` loop into thousands of
++        # blocking system-bus calls and pins a whole core (that is what made
++        # blueman-applet spin). Only skip the cache for a property we just wrote
++        # and bluez has not echoed back yet, and fall through to a live call when
++        # the cache does not know the property.
++        if name not in self.__pending_set:
++            cached = self.__proxy.get_cached_property(name)
++            if cached is not None:
++                return cached.unpack()
++
+         try:
+             prop = self.__proxy.call_sync(
+                 'org.freedesktop.DBus.Properties.Get',
+@@ -116,6 +138,7 @@
+     def set(self, name: str, value: Union[str, int, bool]) -> None:
+         v = GLib.Variant(self.__variant_map[type(value)], value)
+         param = GLib.Variant('(ssv)', (self._interface_name, name, v))
++        self.__pending_set.add(name)
+         self.__proxy.call('org.freedesktop.DBus.Properties.Set',
+                           param,
+                           Gio.DBusCallFlags.NONE,
+diff -urN a/blueman/bluez/Manager.py b/blueman/bluez/Manager.py
+--- a/blueman/bluez/Manager.py	2026-11-09 14:55:20.295439014 -0800
++++ b/blueman/bluez/Manager.py	2026-11-09 14:55:20.302772925 -0800
+@@ -141,9 +141,25 @@
+             if object_path.startswith(adapter_path):
+                 self._on_object_added(self._object_manager, obj_proxy)
+ 
++    @staticmethod
++    def _device_path(adapter_path: str, address: str) -> str:
++        # bluez derives device object paths deterministically from the address.
++        return f"{adapter_path.rstrip('/')}/dev_{address.upper().replace(':', '_')}"
++
+     def find_device(self, address: str, adapter_path: str = "/") -> Optional[Device]:
++        # Resolve the object directly instead of scanning every device on the
++        # bus. The linear scan compared `device['Address']` for every object
++        # bluez knows about; with a continuous LE scan filling the tree with
++        # random advertisers that is thousands of property reads per call, and
++        # RecentConns calls this once per remembered device on every
++        # device-created signal.
++        if adapter_path != "/":
++            obj = self._object_manager.get_object(self._device_path(adapter_path, address))
++            if obj is not None and obj.get_interface('org.bluez.Device1') is not None:
++                return Device(obj_path=obj.get_object_path())
++
+         for device in self.get_devices(adapter_path):
+-            if device['Address'] == address:
++            if device['Address'].upper() == address.upper():
+                 return device
+         return None
+ 
+diff -urN a/blueman/plugins/applet/RecentConns.py b/blueman/plugins/applet/RecentConns.py
+--- a/blueman/plugins/applet/RecentConns.py	2026-11-09 14:55:20.295281147 -0800
++++ b/blueman/plugins/applet/RecentConns.py	2026-11-09 14:55:20.303874070 -0800
+@@ -13,6 +13,8 @@
+ from blueman.plugins.applet.Menu import MenuItem
+ from blueman.plugins.applet.PowerManager import PowerManager, PowerStateListener
+ 
++from gi.repository import GLib
++
+ if TYPE_CHECKING:
+     from blueman.plugins.applet.Menu import Menu, SubmenuItemDict
+ 
+@@ -43,6 +45,9 @@
+     __description__ = _("Provides a menu item that contains last used connections for quick access")
+     __author__ = "Walmis"
+ 
++    # Pending GLib.idle_add source for a coalesced menu rebuild.
++    __rebuild_source: Optional[int] = None
++
+     __gsettings__ = {
+         "schema": "org.blueman.plugins.recentconns",
+         "path": None
+@@ -97,16 +102,29 @@
+                 mitem.set_sensitive(False)
+ 
+     def on_device_created(self, path: str) -> None:
+-        self._rebuild()
++        self._schedule_rebuild()
+ 
+     def on_device_removed(self, path: str) -> None:
+-        self._rebuild()
++        self._schedule_rebuild()
+ 
+     def on_adapter_added(self, path: str) -> None:
+-        self._rebuild()
++        self._schedule_rebuild()
+ 
+     def on_adapter_removed(self, path: str) -> None:
++        self._schedule_rebuild()
++
++    def _schedule_rebuild(self) -> None:
++        # Coalesce bursts of device-added/removed signals into a single rebuild
++        # on the next main loop iteration. A continuous LE scan emits these
++        # continuously, and rebuilding once per signal made the applet do the
++        # full (previously O(devices) synchronous dbus) work many times a second.
++        if self.__rebuild_source is None:
++            self.__rebuild_source = GLib.idle_add(self.__rebuild_idle)
++
++    def __rebuild_idle(self) -> bool:
++        self.__rebuild_source = None
+         self._rebuild()
++        return False
+ 
+     def notify(self, object_path: str, uuid: str) -> None:
+         device = Device(obj_path=object_path)
