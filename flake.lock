@@ -5,11 +5,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1792688439,
-        "narHash": "sha256-/4VvSvOakoT/xuTgh/gSDowDlWyFKbr7mg6DX78Kemg=",
+        "lastModified": 1794782644,
+        "narHash": "sha256-IM28WE68WgFLhflrynk2B5uc/MiY2viRytUj834vvmE=",
         "owner": "haileyok",
         "repo": "engram-garden",
-        "rev": "5baefea737cf5d5401c1732b984fabcc7537a6f9",
+        "rev": "d46bbe340e41893ed153b946b818d582cbe91f73",
         "type": "github"
       },
       "original": {
@@ -70,11 +70,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1793726008,
-        "narHash": "sha256-jQp1wKvbwWdLBASTXkSi/VYmDJ5AbBi1WvcMt9HWJC8=",
+        "lastModified": 1794537146,
+        "narHash": "sha256-Wpz/7x/YWnDIBu7yj6ixe8j6fIMsidd9Y+o1PqPF3iM=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "1d060086d60cb76a40cf37109f979d88a5bd6396",
+        "rev": "d5cc6833999746cffdfe0598f7bc801a57b887a9",
         "type": "github"
       },
       "original": {
