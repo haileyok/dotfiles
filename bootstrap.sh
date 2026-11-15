@@ -27,6 +27,35 @@ echo
 # ---------------------------------------------------------------------------
 # 1. Nix (single-user, no daemon — nothing privileged in a container)
 # ---------------------------------------------------------------------------
+
+# Build users. Nix's default `build-users-group = nixbld` applies to a root
+# local store, so *every* build (nix profile upgrade, nix build, nix-shell)
+# aborts with "the group 'nixbld' specified in 'build-users-group' does not
+# exist" when it is missing. The official Nix docker images create the group
+# and 32 build users for the same reason: builds then run unprivileged
+# instead of as root.
+#
+# This must run on EVERY start, not only when installing nix: /etc/passwd in a
+# Coder workspace is the disposable container layer and is re-created from the
+# image on each pod start, while /nix and /root (persistent volumes) are not.
+# The install below therefore creates them, and so does this call — binary
+# substitution alone never needed them, which is why a workspace can run for
+# months on the installed profile and only break the first time something has
+# to be compiled locally.
+ensure_build_users() {
+    [ "$(id -u)" = "0" ] || return 0
+    if getent group nixbld >/dev/null 2>&1; then
+        getent passwd nixbld32 >/dev/null 2>&1 && return 0   # nothing to do
+    else
+        groupadd -r nixbld
+    fi
+    # Repair a partially-created state as well (group without users).
+    for n in $(seq 1 32); do
+        id "nixbld$n" >/dev/null 2>&1 || useradd -r -g nixbld -G nixbld \
+            -c "Nix build user $n" -d /var/empty -s /usr/sbin/nologin "nixbld$n"
+    done
+}
+
 if ! command -v nix >/dev/null 2>&1 && [ ! -x "$HOME/.nix-profile/bin/nix" ]; then
     echo "--- Installing nix (single-user, --no-daemon) ---"
     # The nix installer unpacks an xz-compressed tarball; bare Ubuntu
@@ -38,13 +67,8 @@ if ! command -v nix >/dev/null 2>&1 && [ ! -x "$HOME/.nix-profile/bin/nix" ]; th
         apt-get update -qq
         apt-get install -y -qq --no-install-recommends xz-utils ca-certificates
     fi
-    # The single-user installer is not root-aware: when the nix binary runs
-    # as root it insists on the multi-user nixbld build group (the bundled
-    # nix.conf sets build-users-group = nixbld), and aborts with "the group
-    # 'nixbld' ... does not exist". The standard container fix (same as the
-    # official Nix docker images) is to create the group and build users
-    # first; the installer then completes, and binary substitution from
-    # cache.nixos.org works without ever needing the daemon.
+    # The single-user installer is not root-aware (see ensure_build_users),
+    # so the build users must exist before it runs.
     if [ "$(id -u)" = "0" ]; then
         # Clean slate from any failed attempt. NOTE: in Coder workspaces /nix
         # is a persistent volume mountpoint (the template's subPath mount), so
@@ -53,18 +77,29 @@ if ! command -v nix >/dev/null 2>&1 && [ ! -x "$HOME/.nix-profile/bin/nix" ]; th
         # partial garbage from a failed attempt.
         rm -rf "$HOME/.nix-profile"
         find /nix -mindepth 1 -delete 2>/dev/null || true
-        if ! getent group nixbld >/dev/null 2>&1; then
-            groupadd -r nixbld
-            for n in $(seq 1 32); do
-                useradd -r -g nixbld -G nixbld -c "Nix build user $n" \
-                    -d /var/empty -s /usr/sbin/nologin "nixbld$n"
-            done
-        fi
+        ensure_build_users
         sh <(curl -L https://nixos.org/nix/install) --no-daemon
     else
         sh <(curl -L https://nixos.org/nix/install) --no-daemon
     fi
 fi
+
+# Re-create the build users on an already-installed workspace (see the
+# ensure_build_users comment above) and clear the /homeless-shelter poison.
+ensure_build_users
+# Unsandboxed builds (the only kind possible here — the container sets
+# user.max_user_namespaces=0, so nix auto-disables its sandbox) run with
+# HOME=/homeless-shelter, and nix refuses to start *any* build while a real
+# path exists at /homeless-shelter:
+#   error: home directory "/homeless-shelter" exists; please remove it to
+#   assure purity of builds without sandboxing
+# Builds that run as root create it (go's telemetry writer did, under
+# $HOME/.config/go/telemetry, during a `nix profile upgrade minimal`), so a
+# leftovers path from a boot without build users would fail every build until
+# removed. With the build users in place the builders are unprivileged and
+# cannot re-create it, so this is a one-line repair of older state.
+rm -rf /homeless-shelter
+
 # shellcheck disable=SC1091
 . "$HOME/.nix-profile/etc/profile.d/nix.sh" \
     || . /nix/var/nix/profiles/default/etc/profile.d/nix.sh

@@ -94,6 +94,9 @@ gamemode/              gamemode.ini → ~/.config/gamemode.ini. Game mode on thi
 selinux/               Custom SELinux module (.te) for nix store execution
 flake.nix / flake.lock Nix package definitions (see tiers above)
 setup.sh               Symlink/bootstrap script
+bootstrap.sh           Coder workspace bootstrap — runs on every workspace start
+                       instead of setup.sh (outranks it in Coder's lookup order);
+                       installs the single-user nix + `.#minimal` profile
 .zshrc                 Linux shell config (this machine)
 .zshrc-macos           macOS shell config — NOT wired into setup.sh
 .aerospace.toml         macOS tiling WM config (AeroSpace) — NOT wired into setup.sh
@@ -273,6 +276,22 @@ Electron/Chromium-based apps do).
   5, and 6. For a machine with only a user account, use
   `nix profile install .#minimal` + the manual symlink list in
   `README.md`'s "Minimal setup" section — no sway/Wayland/desktop configs.
+- **Coder workspaces (`bootstrap.sh`) can substitute but not build.** The
+  workspace pod re-creates `/etc` from the image on every start while `/nix`
+  and `/root` are persistent volumes, so the `nixbld` group and its 32 build
+  users disappear on every restart. `nix profile install`/`upgrade` still
+  *worked* for months because it only substituted from cache.nixos.org; the
+  first upgrade that needs a local build dies with `error: the group 'nixbld'
+  specified in 'build-users-group' does not exist`. `bootstrap.sh` therefore
+  calls `ensure_build_users` on every start (not just at install). The build
+  users also close a second trap: this container sets
+  `user.max_user_namespaces=0`, so nix auto-disables its sandbox and runs the
+  builder with `HOME=/homeless-shelter`; a builder running as *root* can
+  create that path (go's telemetry writer did), after which every later build
+  fails with `home directory "/homeless-shelter" exists; please remove it to
+  assure purity of builds without sandboxing`. Unprivileged build users can't
+  write to `/`, so the poison cannot reappear — but `bootstrap.sh` still
+  `rm -rf`s it to repair pods started before the fix.
 - `.aerospace.toml` (macOS tiling WM) and `.zshrc-macos` exist in the repo
   but have **no bootstrap automation** — no macOS equivalent of `setup.sh`
   exists yet. Treat them as reference configs to manually symlink/adapt, not
