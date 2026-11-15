@@ -8,4 +8,3 @@ if [ -n "$SSH_CONNECTION" ] && [ -z "$ZSH_VERSION" ] && [[ $- == *i* ]]; then
         exec "$HOME/.nix-profile/bin/zsh" -l
     fi
 fi
-. "/home/pelican/.deno/env"
