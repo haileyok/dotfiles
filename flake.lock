@@ -5,11 +5,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1795163597,
-        "narHash": "sha256-jIGB4jeZ1zMeImfFOKTqUd9e9oR8Nmzd5SjGgE4Q6jw=",
+        "lastModified": 1795166449,
+        "narHash": "sha256-MSf9Ht107VyIVXNNKPPpaU+9ufoEXHyvYdI/nbq8JDY=",
         "owner": "haileyok",
         "repo": "engram-garden",
-        "rev": "01c1ef254340f879ce3cd0b94c2ec5618f925011",
+        "rev": "6a47427ae3de6dfd272fa23ebbfc3e7a9ff74696",
         "type": "github"
       },
       "original": {
