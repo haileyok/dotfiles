@@ -192,6 +192,32 @@ swaymsg -t getoutputs
 # Edit sway/config.d/monitors if needed
 ```
 
+### Voice typing
+
+Press Super+Shift+V or Super+Shift+B to start and stop local dictation; text is
+inserted at the caret without pressing Enter. The Waybar microphone label is a
+backend picker. Auto tries Parakeet on the GPU when plugged in, or on the CPU
+on battery. The local 4B Qwen cleanup uses a speculative GPU server and falls
+back to the previous NPU editor if needed; it waits for a completed edit.
+The GPU editor unloads after two idle minutes and may use more battery than the
+NPU. See [voice/fast-editor](voice/fast-editor/) for the install and rollback.
+Whisper GPU and Whisper NPU remain selectable if Parakeet gets something wrong.
+
+This is a laptop-local trial, not provisioned by `setup.sh`: the Q4_K model and
+native CPU build live in `~/.local/share/voice-parakeet/`; the Vulkan CLI and
+libraries are in `~/.local/share/voice-gpu/bin/`. The CPU binary was built for
+this machine from whisper.cpp v1.9.4 (commit `927cfce34f31707e17f2bff35c349632fb9e2c3a`)
+with `GGML_NATIVE=ON`. The [Parakeet TDT 0.6B v3 model](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3)
+is CC BY 4.0; the [GGML conversion](https://huggingface.co/ggml-org/parakeet-GGUF)
+is `ggml-parakeet-tdt-0.6b-v3-q4_k.bin` (SHA-256
+`8b205b8b39c6535e153de6fb11c51db46125d45c4f16ba496fe41a0fe71b885e`).
+`~/.local/share/voice-parakeet/mesa-root` is a Nix GC root for the verified
+Mesa ICD used by both GPU speech binaries; remove it if this trial is removed.
+If Parakeet fails, Auto tries CPU after GPU, then the corresponding Whisper
+backend (GPU on AC, NPU on battery). Recordings over 60 seconds use Whisper
+directly to avoid untested long-context memory use; Whisper GPU also falls back
+to NPU if needed.
+
 ### 9. AirPods / earbuds (optional)
 
 **MagicPods** — [steam3d/MagicPodsLinux](https://github.com/steam3d/MagicPodsLinux)

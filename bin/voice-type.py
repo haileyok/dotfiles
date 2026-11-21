@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Toggle local NPU dictation into the focused Wayland text field (never Enter)."""
+"""Toggle local dictation into the focused Wayland text field (never Enter)."""
 
 from array import array
 import fcntl
+import http.client
 import json
 import os
 import re
@@ -10,6 +11,7 @@ import shutil
 from difflib import SequenceMatcher
 from pathlib import Path
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -23,19 +25,39 @@ MODEL = Path.home() / ".config/flm/models/Whisper-V3-Turbo-NPU2/model.q4nx"
 EDITOR_MODEL = Path.home() / ".config/flm/models/Qwen3-4B-Instruct-2507-NPU2/model.q4nx"
 EDITOR_TAG = "qwen3-it:4b"
 EDITOR_URL = "http://127.0.0.1:52628"
+EDITOR_MODE_FILE = Path.home() / ".config/voice-type/editor-mode"
+FAST_EDITOR_SOCKET = ROOT / "fast-editor.sock"
+FAST_EDITOR_LAST_USE = ROOT / "fast-editor-last-use"
+FAST_EDITOR_WORKER = Path(__file__).with_name("voice-fast-editor-server.py")
+FAST_EDITOR_INSTALL = Path.home() / ".local/share/voice-fast-editor"
+FAST_EDITOR_BINARY = FAST_EDITOR_INSTALL / "bin/llama-server"
+FAST_EDITOR_MODEL = FAST_EDITOR_INSTALL / "models/qwen3-4b-instruct-2507-q4_k_m.gguf"
+FAST_EDITOR_RADV_ICD = Path("/usr/share/vulkan/icd.d/radeon_icd.x86_64.json")
+FAST_EDITOR_BUDGET = 18
+FAST_EDITOR_STARTUP_WAIT = 5
 # Use the laptop's HDA internal mic, not the default source (which may be a webcam).
 # The ACP/PDM Mic1 can return a constant -32768 after reboot; Mic2 is a separate
 # working HDA capture path. It needs the HiFi (Mic1, Mic2, Speaker) card profile.
+# Verified 2025-11-16: Mic1 records clipped garbage (peak 32768, ~26 distinct
+# values) while Mic2 picks up room audio and speaker playback.
 MIC = "alsa_input.pci-0000_c1_00.6.HiFi__Mic2__source"
 URL = "http://127.0.0.1:52625"
 GPU_URL = "http://127.0.0.1:52629"
 MODE_FILE = ROOT / "backend-mode"
 GPU_IDLE_CONFIG = Path.home() / ".config/voice-type/gpu-idle-minutes"
 GPU_WORKER = Path(__file__).with_name("voice-gpu-server.py")
+PARAKEET_ROOT = Path.home() / ".local/share/voice-parakeet"
+PARAKEET_MODEL = PARAKEET_ROOT / "models/ggml-parakeet-tdt-0.6b-v3-q4_k.bin"
+# This full-attention build has not been validated for long recordings; use
+# the existing Whisper path rather than risk unbounded desktop memory use.
+PARAKEET_MAX_SECONDS = 60
+PARAKEET_CPU = PARAKEET_ROOT / "bin/parakeet-cli"
+PARAKEET_GPU = Path.home() / ".local/share/voice-gpu/bin/parakeet-cli"
+RADV_ICD = Path("/nix/store/1vkzwrp4ny20iljfnv9valq0bfn8czlv-mesa-26.2.3/share/vulkan/icd.d/radeon_icd.x86_64.json")
 STATUS = ROOT / "status.json"
 STAGES = {
     "recording": ("● Recording", "Voice typing is recording; press the hotkey to stop"),
-    "transcribing": ("◌ Transcribing", "Whisper is transcribing the complete recording on the NPU"),
+    "transcribing": ("◌ Transcribing", "The complete recording is being transcribed locally"),
     "polishing": ("✦ Polishing", "The local editor is polishing the transcript"),
     "done": ("✓ Typed", "Transcription inserted at the caret"),
     "error": ("! Voice error", "Voice typing failed; see the notification for details"),
@@ -108,7 +130,7 @@ def show_status():
 def selected_mode():
     try:
         mode = MODE_FILE.read_text().strip()
-        return mode if mode in ("auto", "npu", "gpu") else "auto"
+        return mode if mode in ("auto", "parakeet-gpu", "parakeet-cpu", "npu", "gpu") else "auto"
     except OSError:
         return "auto"
 
@@ -123,7 +145,7 @@ def on_ac():
 
 def chosen_backend():
     mode = selected_mode()
-    return ("gpu" if on_ac() else "npu") if mode == "auto" else mode
+    return ("parakeet-gpu" if on_ac() else "parakeet-cpu") if mode == "auto" else mode
 
 
 def gpu_idle_minutes():
@@ -137,6 +159,12 @@ def gpu_idle_minutes():
 def gpu_available():
     return (Path.home() / ".local/share/voice-gpu/bin/whisper-server").is_file() and (
         Path.home() / ".local/share/voice-gpu/models/ggml-large-v3-turbo.bin").is_file()
+
+
+def parakeet_available(backend):
+    binary = PARAKEET_GPU if backend == "parakeet-gpu" else PARAKEET_CPU
+    return (PARAKEET_MODEL.is_file() and binary.is_file() and
+            (backend != "parakeet-gpu" or RADV_ICD.is_file()))
 
 
 def gpu_ready():
@@ -166,31 +194,51 @@ def ensure_gpu():
     raise RuntimeError("GPU Whisper server did not become ready")
 
 
+BACKEND_NAMES = {
+    "parakeet-gpu": "Parakeet GPU", "parakeet-cpu": "Parakeet CPU",
+    "gpu": "Whisper GPU", "npu": "Whisper NPU",
+}
+
+
 def backend_label():
     mode = selected_mode()
     backend = chosen_backend()
-    label = f"🎙 {'Auto · ' if mode == 'auto' else ''}{backend.upper()}"
-    hint = (f"Voice typing: {mode.upper()} → {backend.upper()} ({'AC' if on_ac() else 'battery'}). "
-            f"Click to choose backend. GPU unloads after {gpu_idle_minutes()} min idle "
-            "(set ~/.config/voice-type/gpu-idle-minutes to 1–60).")
-    if backend == "gpu" and not gpu_available():
+    label = f"🎙 {'Auto · ' if mode == 'auto' else ''}{BACKEND_NAMES[backend]}"
+    hint = (f"Voice typing: {BACKEND_NAMES[backend]} ({'AC' if on_ac() else 'battery'}). "
+            f"Click to choose a backend. Recordings over {PARAKEET_MAX_SECONDS}s or unavailable "
+            "Parakeet backends use Whisper. "
+            f"Whisper GPU unloads after {gpu_idle_minutes()} min idle.")
+    if backend.startswith("parakeet-") and not parakeet_available(backend):
         label += " ?"
-        hint += " GPU installation missing; transcription will use NPU."
-    return {"text": label, "tooltip": hint, "class": backend}
+        hint += " Parakeet installation missing; transcription will use a fallback."
+    elif backend == "gpu" and not gpu_available():
+        label += " ?"
+        hint += " Whisper GPU installation missing; transcription will use NPU."
+    css_class = "gpu" if backend in ("gpu", "parakeet-gpu") else ("cpu" if backend == "parakeet-cpu" else "npu")
+    return {"text": label, "tooltip": hint, "class": css_class}
 
 
 def pick_backend():
-    options = "Auto (GPU on AC · NPU on battery)\nNPU always\nGPU always\n"
-    choice = subprocess.run(["wofi", "--dmenu", "--prompt", "Voice transcription", "--lines", "3"],
-                            input=options, text=True, capture_output=True, check=False).stdout.strip()
-    mode = {"Auto (GPU on AC · NPU on battery)": "auto", "NPU always": "npu", "GPU always": "gpu"}.get(choice)
+    options = {
+        "Auto (Parakeet GPU on AC · CPU on battery)": "auto",
+        "Parakeet GPU": "parakeet-gpu",
+        "Parakeet CPU": "parakeet-cpu",
+        "Whisper GPU": "gpu",
+        "Whisper NPU": "npu",
+    }
+    choice = subprocess.run(["wofi", "--dmenu", "--prompt", "Voice transcription", "--lines", "5"],
+                            input="\n".join(options) + "\n", text=True, capture_output=True, check=False).stdout.strip()
+    mode = options.get(choice)
     if mode:
         if mode == "gpu" and not gpu_available():
-            notify("GPU Whisper is unavailable; reinstall GPU model before selecting it")
+            notify("Whisper GPU is unavailable; reinstall the GPU model before selecting it")
+            return
+        if mode.startswith("parakeet-") and not parakeet_available(mode):
+            notify("Parakeet is unavailable; install the model and backend before selecting it")
             return
         MODE_FILE.write_text(mode + "\n")
         refresh_waybar(WAYBAR_BACKEND_SIGNAL)
-        notify(f"Voice backend: {mode.upper()}" if mode != "auto" else "Voice backend: Auto")
+        notify(f"Voice backend: {BACKEND_NAMES[mode]}" if mode != "auto" else "Voice backend: Auto")
 
 
 def notify(message):
@@ -333,20 +381,163 @@ def ensure_editor():
     return False
 
 
-def cleanup_transcript(raw):
-    """Polish a transcript locally; retain Whisper's output if editing fails."""
+def editor_mode():
+    try:
+        mode = EDITOR_MODE_FILE.read_text().strip()
+        return mode if mode in ("fast", "npu") else "fast"
+    except OSError:
+        return "fast"
+
+
+class UnixHTTPConnection(http.client.HTTPConnection):
+    def __init__(self, path, timeout):
+        super().__init__("localhost", timeout=timeout)
+        self.path = str(path)
+        self.uds = None
+
+    def connect(self):
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            sock.settimeout(self.timeout)
+            sock.connect(self.path)
+        except BaseException:
+            sock.close()
+            raise
+        self.uds = sock
+        self.sock = sock
+
+
+def fast_editor_available():
+    return all(path.is_file() for path in (FAST_EDITOR_WORKER, FAST_EDITOR_BINARY, FAST_EDITOR_MODEL, FAST_EDITOR_RADV_ICD))
+
+
+def start_fast_editor():
+    if not fast_editor_available():
+        return
+    try:
+        subprocess.Popen([sys.executable, str(FAST_EDITOR_WORKER)], stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        pass
+
+
+def fast_editor_ready(timeout):
+    connection = UnixHTTPConnection(FAST_EDITOR_SOCKET, timeout)
+    try:
+        connection.request("GET", "/health")
+        response = connection.getresponse()
+        data = json.load(response)
+        return response.status == 200 and isinstance(data, dict) and data.get("status") == "ok"
+    except (OSError, ValueError, TypeError, http.client.HTTPException):
+        return False
+    finally:
+        connection.close()
+
+
+def ensure_fast_editor(deadline):
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        return False
+    if fast_editor_ready(min(0.2, remaining)):
+        return True
+    if not fast_editor_available():
+        return False
+    start_fast_editor()
+    startup_deadline = min(deadline, time.monotonic() + FAST_EDITOR_STARTUP_WAIT)
+    while True:
+        remaining = startup_deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+        if fast_editor_ready(min(0.2, remaining)):
+            return True
+        time.sleep(min(0.05, max(0, startup_deadline - time.monotonic())))
+
+
+def fast_editor_request(request, deadline):
+    """Stream the local editor response until the absolute deadline."""
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("Fast editor deadline elapsed")
+    connection = UnixHTTPConnection(FAST_EDITOR_SOCKET, remaining)
+    response = None
+    try:
+        payload = json.dumps(request).encode()
+        connection.request("POST", "/v1/chat/completions", payload, {"Content-Type": "application/json"})
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("Fast editor deadline elapsed")
+        connection.uds.settimeout(remaining)
+        response = connection.getresponse()
+        if response.status != 200:
+            raise RuntimeError("Fast editor request failed")
+        parts = []
+        output_length = 0
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("Fast editor deadline elapsed")
+            connection.uds.settimeout(remaining)
+            line = response.readline(65537)
+            if len(line) > 65536:
+                raise ValueError("Fast editor response line too long")
+            if not line:
+                raise ValueError("Fast editor response ended early")
+            if not line.startswith(b"data:"):
+                continue
+            data = line[5:].strip()
+            if data == b"[DONE]":
+                raise ValueError("Fast editor did not report a finish reason")
+            event = json.loads(data)
+            if not isinstance(event, dict) or not isinstance(event.get("choices", []), list):
+                raise ValueError("Unexpected fast editor event")
+            choices = event.get("choices", [])
+            if not choices:
+                continue
+            choice = choices[0]
+            if not isinstance(choice, dict) or not isinstance(choice.get("delta", {}), dict):
+                raise ValueError("Unexpected fast editor choice")
+            content = choice.get("delta", {}).get("content")
+            if content:
+                if not isinstance(content, str):
+                    raise ValueError("Unexpected fast editor content")
+                output_length += len(content)
+                if output_length > 32768:
+                    raise ValueError("Fast editor response too long")
+                parts.append(content)
+            finish = choice.get("finish_reason")
+            if finish is not None:
+                if not isinstance(finish, str):
+                    raise ValueError("Unexpected fast editor finish reason")
+                return {"message": {"content": "".join(parts)}, "finish_reason": finish}
+    finally:
+        if response is not None:
+            response.close()
+        connection.close()
+
+
+def npu_editor_request(request):
+    if not ensure_editor():
+        raise RuntimeError("NPU editor unavailable")
+    payload = dict(request, model=EDITOR_TAG, stream=False)
+    payload.pop("draft_text", None)
+    req = urllib.request.Request(EDITOR_URL + "/v1/chat/completions", json.dumps(payload).encode(),
+                                 {"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=18) as response:
+        return json.load(response)["choices"][0]
+
+
+def cleanup_transcript(raw, report=None):
+    """Polish locally; retain the original when editing is unsafe or unavailable."""
     if not raw:
         return raw
     # Keep large notes intact if the small editor would exceed its response budget.
     if len(raw.split()) > 180:
         return raw
-    try:
-        if not ensure_editor():
-            return raw
-    except (OSError, subprocess.SubprocessError):
-        return raw
+    mode = editor_mode()
+    deadline = time.monotonic() + FAST_EDITOR_BUDGET
     request = {
-        "model": EDITOR_TAG, "stream": False, "think": False,
+        "model": "voice-editor" if mode == "fast" else EDITOR_TAG,
+        "stream": mode == "fast", "think": False,
         "temperature": 0, "max_tokens": min(1024, max(128, len(raw.split()) * 5)),
         "messages": [
             {"role": "system", "content": (
@@ -361,12 +552,27 @@ def cleanup_transcript(raw):
         ],
     }
     try:
-        payload = json.dumps(request).encode()
-        req = urllib.request.Request(EDITOR_URL + "/v1/chat/completions", payload,
-                                     {"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=18) as response:
-            data = json.load(response)
-        choice = data["choices"][0]
+        if mode == "fast":
+            try:
+                FAST_EDITOR_LAST_USE.touch(exist_ok=True)
+                if not ensure_fast_editor(deadline):
+                    raise RuntimeError("Fast editor unavailable")
+                request["draft_text"] = raw
+                choice = fast_editor_request(request, deadline)
+                if (not isinstance(choice, dict) or not isinstance(choice.get("message"), dict) or
+                        not isinstance(choice["message"].get("content"), str) or
+                        choice.get("finish_reason") != "stop" or not choice["message"]["content"].strip()):
+                    raise ValueError("Fast editor response incomplete")
+            except (OSError, RuntimeError, ValueError, KeyError, IndexError, TypeError, http.client.HTTPException) as exc:
+                print(f"voice-type: fast cleanup unavailable ({type(exc).__name__}); trying NPU", file=sys.stderr)
+                if report is not None:
+                    report.append("Fast cleanup unavailable; tried NPU fallback")
+                choice = npu_editor_request(request)
+        else:
+            choice = npu_editor_request(request)
+        if (not isinstance(choice, dict) or not isinstance(choice.get("message"), dict) or
+                not isinstance(choice["message"].get("content"), str)):
+            raise ValueError("Editor response malformed")
         edited = choice["message"]["content"].strip()
         if choice.get("finish_reason") != "stop" or not edited:
             return raw
@@ -377,17 +583,26 @@ def cleanup_transcript(raw):
         edited_words = len(edited.split())
         if edited_words < max(1, original_words // 2) or edited_words > original_words * 2 + 8:
             return raw
-        # Reject rewrites that swap the speaker's perspective or introduce a new negation.
+        # Reject changes to perspective, negations and values; a bad edit must
+        # not silently turn e.g. 0.01 into 0.1 or fifty into fifteen.
         protected = {"i", "me", "my", "mine", "we", "us", "our", "ours", "you", "your",
                      "yours", "he", "him", "his", "she", "her", "hers", "they", "them",
                      "their", "theirs", "not", "never", "no"}
+        number_words = set("zero one two three four five six seven eight nine ten eleven twelve "
+                           "thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty "
+                           "thirty forty fifty sixty seventy eighty ninety hundred thousand million "
+                           "billion trillion first second third fourth fifth sixth seventh eighth ninth tenth".split())
         tokens = lambda text: [word.casefold() for word in re.findall(r"\b[\w]+\b", text)]
-        if [word for word in tokens(raw) if word in protected] != [
-                word for word in tokens(edited) if word in protected]:
-            return raw
-        # Permit local grammar/ASR repairs; reject inserted story fragments and rewrites.
         original = tokens(raw)
         revised = tokens(edited)
+        def protected_tokens(words):
+            return [word for word in words if word in protected or word in number_words or any(c.isdigit() for c in word)]
+        if protected_tokens(original) != protected_tokens(revised):
+            return raw
+        incomplete = {"before", "after", "because", "until", "unless", "when", "while", "if", "and", "or", "but", "to"}
+        if original and original[-1] in incomplete and (not revised or revised[-1] != original[-1]):
+            return raw
+        # Permit local grammar/ASR repairs; reject inserted story fragments and rewrites.
         if SequenceMatcher(None, original, revised, autojunk=False).ratio() < 0.72:
             return raw
         for kind, before_start, before_end, after_start, after_end in SequenceMatcher(
@@ -396,10 +611,53 @@ def cleanup_transcript(raw):
                 return raw
             if kind == "replace" and after_end - after_start > (before_end - before_start) + 1:
                 return raw
+            if kind == "delete" and before_end - before_start > 2:
+                return raw
+            if kind == "replace" and (before_end - before_start) - (after_end - after_start) > 1:
+                return raw
         return edited
-    except (OSError, ValueError, KeyError, IndexError, TypeError) as exc:
+    except (OSError, RuntimeError, ValueError, KeyError, IndexError, TypeError, http.client.HTTPException, subprocess.SubprocessError) as exc:
         print(f"voice-type: cleanup unavailable ({type(exc).__name__})", file=sys.stderr)
+        if report is not None:
+            report[:] = ["Cleanup unavailable; original transcript typed"]
         return raw
+
+
+class ParakeetAudioTooLong(RuntimeError):
+    pass
+
+
+def transcribe_parakeet(wav, backend):
+    with wave.open(str(wav), "rb") as audio:
+        if audio.getnframes() > audio.getframerate() * PARAKEET_MAX_SECONDS:
+            raise ParakeetAudioTooLong("Recording exceeds the Parakeet trial limit")
+    if not parakeet_available(backend):
+        raise RuntimeError("Parakeet model or backend is missing")
+    use_gpu = backend == "parakeet-gpu"
+    binary = PARAKEET_GPU if use_gpu else PARAKEET_CPU
+    threads = 6 if use_gpu else min(12, os.cpu_count() or 1)
+    env = dict(os.environ)
+    library_path = str(binary.parent)
+    if env.get("LD_LIBRARY_PATH"):
+        library_path += os.pathsep + env["LD_LIBRARY_PATH"]
+    env["LD_LIBRARY_PATH"] = library_path
+    command = [str(binary), "--model", str(PARAKEET_MODEL), "--threads", str(threads)]
+    if use_gpu:
+        # Match the verified RADV device and loader used by the Whisper GPU server.
+        env.update(VK_DRIVER_FILES=str(RADV_ICD), GGML_VK_VISIBLE_DEVICES="0")
+    else:
+        command.extend(["--no-gpu", "--no-prints"])
+    command.append(str(wav))
+    result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=605)
+    if result.returncode or any(line.lstrip().lower().startswith("error:") for line in result.stderr.splitlines()):
+        raise RuntimeError("Parakeet transcription failed")
+    # The CLI can successfully fall back to CPU. Keep its completed transcript
+    # rather than transcribing twice, but make the unverified GPU visible.
+    # stderr is captured in memory, never logged.
+    if use_gpu and "parakeet_backend_init_gpu: using Vulkan0 backend" not in result.stderr:
+        print("voice-type: Parakeet GPU could not be verified; using the completed result", file=sys.stderr)
+        notify("Parakeet GPU could not be verified; using the available backend")
+    return result.stdout.strip().replace("\n", " ").replace("\r", " ")
 
 
 def transcribe_gpu(wav):
@@ -430,20 +688,54 @@ def transcribe(wav):
     return data["text"].strip().replace("\n", " ").replace("\r", " ")
 
 
-def mic_node_id():
-    """Resolve the built-in mic's live PipeWire node ID; pw-record --target name misroutes here."""
+def transcribe_with_fallback(wav, backend):
+    if backend.startswith("parakeet-"):
+        whisper_backend = "gpu" if backend == "parakeet-gpu" else "npu"
+        try:
+            return transcribe_parakeet(wav, backend)
+        except ParakeetAudioTooLong:
+            notify(f"Long recording; transcribing with {BACKEND_NAMES[whisper_backend]}")
+        except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as exc:
+            print(f"voice-type: Parakeet unavailable ({type(exc).__name__})", file=sys.stderr)
+            if backend == "parakeet-gpu" and parakeet_available("parakeet-cpu"):
+                notify("Parakeet GPU unavailable; trying CPU")
+                try:
+                    return transcribe_parakeet(wav, "parakeet-cpu")
+                except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as cpu_exc:
+                    print(f"voice-type: Parakeet CPU unavailable ({type(cpu_exc).__name__})", file=sys.stderr)
+            notify(f"Parakeet unavailable; retrying with {BACKEND_NAMES[whisper_backend]}")
+        backend = whisper_backend
+    if backend == "gpu":
+        try:
+            ensure_gpu()
+            return transcribe_gpu(wav)
+        except (RuntimeError, OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
+            print(f"voice-type: Whisper GPU unavailable ({type(exc).__name__})", file=sys.stderr)
+            notify("Whisper GPU unavailable; retrying on NPU")
+    ensure_server()
+    return transcribe(wav)
+
+
+def mic_target():
+    """Confirm the built-in mic exists and return the name pw-record must bind to.
+
+    pw-record --target resolves a node serial or name, never a pw-dump object.id.
+    Those numbers drift apart whenever nodes are recreated, and passing the id
+    silently bound the recorder to whichever node owned that serial -- on this
+    machine the Speaker sink, which records pure silence.
+    """
     result = subprocess.check_output(["pw-dump"], timeout=5)
     for entry in json.loads(result):
         props = entry.get("info", {}).get("props", {})
         if entry.get("type") == "PipeWire:Interface:Node" and props.get("node.name") == MIC:
-            return str(entry["id"])
+            return MIC
     raise RuntimeError("Built-in internal microphone (Mic2) unavailable; select the HiFi (Mic1, Mic2, Speaker) audio profile")
 
 
 def start():
     wav = ROOT / "recording.wav"
     wav.unlink(missing_ok=True)
-    target = mic_node_id()
+    target = mic_target()
     # ALSA can restore the HDA capture mux to Headset Mic across reboots.
     # PipeWire's Mic2 node exists in that state but records no useful speech.
     subprocess.run(["amixer", "-D", "hw:Generic_1", "sset", "Internal Mic", "cap"],
@@ -455,6 +747,9 @@ def start():
     backend = chosen_backend()
     (ROOT / "recording.json").write_text(json.dumps({"pid": process.pid, "wav": str(wav), "backend": backend}))
     set_status("recording", process.pid)
+    if editor_mode() == "fast":
+        # Load the editor while the user is speaking, not after they stop.
+        start_fast_editor()
     if backend == "gpu" and gpu_available():
         # Load weights while the user speaks; on stop we can still fall back to NPU.
         last_use = ROOT / "gpu-last-use"
@@ -496,19 +791,8 @@ def stop(state):
         return
     backend = state.get("backend", "npu")
     set_status("transcribing")
-    notify(f"Transcribing on {backend.upper()}…")
-    if backend == "gpu":
-        try:
-            ensure_gpu()
-            text = transcribe_gpu(wav)
-        except (RuntimeError, OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
-            print(f"voice-type: GPU unavailable ({exc}), retrying on NPU", file=sys.stderr)
-            notify("GPU unavailable; retrying on NPU")
-            ensure_server()
-            text = transcribe(wav)
-    else:
-        ensure_server()
-        text = transcribe(wav)
+    notify(f"Transcribing with {BACKEND_NAMES.get(backend, 'Whisper NPU')}…")
+    text = transcribe_with_fallback(wav, backend)
     if not text:
         notify("No speech detected")
         return
@@ -516,7 +800,8 @@ def stop(state):
         notify("Focus changed; text was not inserted")
         return
     set_status("polishing")
-    edited = cleanup_transcript(text)
+    cleanup_report = []
+    edited = cleanup_transcript(text, report=cleanup_report)
     if focus_id() != target:
         notify("Focus changed; text was not inserted")
         return
@@ -527,7 +812,7 @@ def stop(state):
              else None) or "wtype"
     subprocess.run([typer, "-"], input=edited, text=True, check=True, timeout=30)
     set_status("done")
-    notify("Transcription typed")
+    notify(cleanup_report[0] if cleanup_report else "Transcription typed")
 
 
 def main():
